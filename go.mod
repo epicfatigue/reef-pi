@@ -49,3 +49,5 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 )
+
++replace github.com/reef-pi/drivers => github.com/epicfatigue/drivers
