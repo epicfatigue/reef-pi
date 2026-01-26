@@ -109,8 +109,8 @@ capabilities:log,Log
 capabilities:macro,Macro
 capabilities:macros,Macros
 capabilities:manager,Instances
-capabilities:ph,pH
-capabilities:phprobes,Probes (pH)
+capabilities:ph,Chemistry
+capabilities:phprobes,Chemistry Probes
 capabilities:system,System
 capabilities:temperature,Temperatures
 capabilities:timers,Timers
@@ -211,7 +211,7 @@ function:doser,doser
 function:equipment,equipment
 function:lightings,light
 function:macro,macro
-function:phprobes,pH probe
+function:phprobes,Chemistry probe
 function:reminder,email reminder
 function:subsystem,subsystem
 function:temperature,temperature
@@ -274,9 +274,9 @@ macro:warn_delete,This action will delete macro {{name}}
 ph:alert_above,Alert Above
 ph:alert_below,Alert Below
 ph:calibrate,Calibrate
-ph:chart:current,pH (latest)
-ph:chart:historical,pH (historical)
-ph:chart:usage,pH (hist.& usage)
+ph:chart:current,Chemistry (latest)
+ph:chart:historical,Chemistry (historical)
+ph:chart:usage,Chemistry (hist.& usage)
 ph:chart_color, Chart color
 ph:chart_unit, Chart unit
 ph:chart_ymax, Chart maximum

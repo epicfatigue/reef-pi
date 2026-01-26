@@ -1,5 +1,5 @@
 import React from 'react'
-import { fetchPhProbes, createProbe, updateProbe, deleteProbe, calibrateProbe, readProbe } from 'redux/actions/phprobes'
+import { fetchPhProbes, createProbe, updateProbe, deleteProbe, readProbe, fetchProbeSnapshot } from 'redux/actions/phprobes'
 import { connect } from 'react-redux'
 import PhForm from './ph_form'
 import Collapsible from '../ui_components/collapsible'
@@ -9,7 +9,7 @@ import CalibrationWizard from './calibration_wizard'
 import i18next from 'i18next'
 import { SortByName } from 'utils/sort_by_name'
 
-class ph extends React.Component {
+class Chemistry extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
@@ -20,8 +20,6 @@ class ph extends React.Component {
     this.probeList = this.probeList.bind(this)
     this.handleToggleAddProbeDiv = this.handleToggleAddProbeDiv.bind(this)
     this.handleDeleteProbe = this.handleDeleteProbe.bind(this)
-    // for future use
-    // this.handleResetProbe = this.handleResetProbe.bind(this)
     this.handleCreateProbe = this.handleCreateProbe.bind(this)
     this.handleUpdateProbe = this.handleUpdateProbe.bind(this)
     this.dismissModal = this.dismissModal.bind(this)
@@ -31,14 +29,18 @@ class ph extends React.Component {
     this.props.fetchPhProbes()
   }
 
+  // IMPORTANT: never mutate probe objects coming from redux store
+  toggleProbeEnabled (probe) {
+    const payload = { ...probe, enable: !probe.enable }
+    this.props.update(probe.id, payload)
+  }
+
   probeList () {
     return this.props.probes
       .sort((a, b) => SortByName(a, b))
       .map(probe => {
-        const handleToggleState = () => {
-          probe.enable = !probe.enable
-          this.props.update(probe.id, probe)
-        }
+        const handleToggleState = () => this.toggleProbeEnabled(probe)
+
         const calibrationButton = (
           <button
             type='button'
@@ -51,6 +53,7 @@ class ph extends React.Component {
             {i18next.t('ph:calibrate')}
           </button>
         )
+
         return (
           <Collapsible
             key={'panel-ph-' + probe.id}
@@ -76,7 +79,11 @@ class ph extends React.Component {
   }
 
   calibrateProbe (e, probe) {
-    this.setState({ currentProbe: probe, showCalibrate: true })
+    // Open modal first, then fetch snapshot (wizard also polls, but this makes it feel instant)
+    this.setState({ currentProbe: probe, showCalibrate: true }, () => {
+      this.props.fetchProbeSnapshot(probe.id)
+      this.props.readProbe(probe.id)
+    })
   }
 
   dismissModal () {
@@ -89,6 +96,7 @@ class ph extends React.Component {
       enable: values.enable,
       period: values.period,
       analog_input: values.analog_input,
+      temp_sensor_id: parseInt(values.temp_sensor_id || -1, 10),
       notify: {
         enable: values.notify,
         min: parseFloat(values.minAlert),
@@ -120,22 +128,6 @@ class ph extends React.Component {
     this.props.create(payload)
     this.handleToggleAddProbeDiv()
   }
-
-  // for future use :-)
-  //  handleResetProbe (probe) {
-  //    const message = (
-  //      <div>
-  //        <p>
-  //          {i18next.t('ph:warn_reset', {name: probe.name})}
-  //        </p>
-  //      </div>
-  //    )
-  //    confirm(i18next.t('reset'), { description: message }).then(
-  //      function () {
-  //        this.props.reset(probe.id)
-  //      }.bind(this)
-  //    )
-  //  }
 
   handleDeleteProbe (probe) {
     const message = (
@@ -172,13 +164,17 @@ class ph extends React.Component {
     }
 
     let calibrationModal = null
-    if (this.state.showCalibrate) {
+    if (this.state.showCalibrate && this.state.currentProbe) {
+      const pid = this.state.currentProbe.id
+      const snap = this.props.snapshots ? this.props.snapshots[pid] : null
+
       calibrationModal = (
         <CalibrationWizard
           probe={this.state.currentProbe}
           currentReading={this.props.currentReading}
+          snapshot={snap}
           readProbe={this.props.readProbe}
-          calibrateProbe={this.props.calibrateProbe}
+          fetchProbeSnapshot={this.props.fetchProbeSnapshot}
           confirm={this.dismissModal}
           cancel={this.dismissModal}
         />
@@ -216,7 +212,8 @@ const mapStateToProps = state => {
     ais: state.analog_inputs,
     currentReading: state.ph_reading,
     macros: state.macros,
-    equipment: state.equipment
+    equipment: state.equipment,
+    snapshots: state.phprobe_snapshots || {}
   }
 }
 
@@ -226,13 +223,14 @@ const mapDispatchToProps = dispatch => {
     create: t => dispatch(createProbe(t)),
     delete: id => dispatch(deleteProbe(id)),
     update: (id, t) => dispatch(updateProbe(id, t)),
-    calibrateProbe: (id, p) => dispatch(calibrateProbe(id, p)),
-    readProbe: id => dispatch(readProbe(id))
+    readProbe: id => dispatch(readProbe(id)),
+    fetchProbeSnapshot: id => dispatch(fetchProbeSnapshot(id))
   }
 }
 
 const Ph = connect(
   mapStateToProps,
   mapDispatchToProps
-)(ph)
+)(Chemistry)
+
 export default Ph

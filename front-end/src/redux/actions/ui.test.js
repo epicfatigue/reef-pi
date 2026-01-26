@@ -34,7 +34,7 @@ describe('ui actions', () => {
     fetchMock.getOnce('/api/capabilities', caps)
     fetchMock.getOnce('/api/info', {})
     fetchMock.getOnce('/api/atos', [])
-    fetchMock.getOnce('/api/phprobes', [])
+    fetchMock.getOnce('/api/chemistryprobes', [])
     fetchMock.getOnce('/api/tcs', [])
     fetchMock.getOnce('/api/lights', [])
     fetchMock.getOnce('/api/inlets', [])

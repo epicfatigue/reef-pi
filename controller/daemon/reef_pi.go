@@ -10,6 +10,7 @@ import (
     "github.com/reef-pi/reef-pi/controller/storage"
     "github.com/reef-pi/reef-pi/controller/telemetry"
     "github.com/reef-pi/reef-pi/controller/utils"
+	"github.com/reef-pi/reef-pi/controller/modules/temperature"
 )
 
 const Bucket = storage.ReefPiBucket
@@ -23,6 +24,7 @@ type ReefPi struct {
     h          telemetry.HealthChecker
     dm         *device_manager.DeviceManager
     subsystems *controller.SubsystemComposite
+	temp *temperature.Controller
 }
 
 func New(version, database string) (*ReefPi, error) {

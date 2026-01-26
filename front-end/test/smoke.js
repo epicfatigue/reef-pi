@@ -8,7 +8,7 @@ import equipment from './equipment'
 import timer from './timer'
 import light from './light'
 import macro from './macro'
-import ph from './ph'
+import chemistry from './chemistry'
 import ato from './ato'
 import doser from './doser'
 import tc from './tc'
@@ -33,7 +33,7 @@ test('Smoke Test', async t => {
   await timer.create()
   await light.create()
   await macro.create()
-  await ph.create()
+  await chemistry.create()
   await ato.create()
   await doser.create()
   await tc.create()

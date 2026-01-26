@@ -3,12 +3,12 @@ import * as Yup from 'yup'
 import { ErrorFor, ShowError } from '../utils/validation_helper'
 import classNames from 'classnames'
 import { withFormik, Field } from 'formik'
-import { FaCheck } from 'react-icons/fa'
+import { FaClipboardCheck } from 'react-icons/fa'
 import { IconContext } from 'react-icons'
 import i18n from 'utils/i18n'
 
 export const Calibrate = ({ values, errors, touched, label, submitForm, complete, readOnly }) => {
-  const handleSubmit = event => {
+  const handleSubmit = (event) => {
     event.preventDefault()
     submitForm()
   }
@@ -19,6 +19,7 @@ export const Calibrate = ({ values, errors, touched, label, submitForm, complete
         <label htmlFor='value' className='col-4 col-form-label'>
           {label}
         </label>
+
         <div className='col-4'>
           <div className='form-group'>
             <Field
@@ -33,18 +34,19 @@ export const Calibrate = ({ values, errors, touched, label, submitForm, complete
             <ErrorFor errors={errors} touched={touched} name='value' />
           </div>
         </div>
+
         <div className='col-4'>
           {complete
             ? (
               <IconContext.Provider value={{ color: 'blue', className: 'align-bottom' }}>
-                <FaCheck />
+                <FaClipboardCheck />
               </IconContext.Provider>
               )
             : (
               <input
                 type='submit'
                 disabled={readOnly}
-                value={i18n.t('ph:run_calibration')}
+                value={i18n.t('ph:run_calibration') || 'Copy payload'}
                 className='btn btn-sm btn-outline-primary'
               />
               )}
@@ -68,6 +70,9 @@ const CalibrateForm = withFormik({
     }
   },
   validationSchema: CalibrateSchema,
+
+  // IMPORTANT: no API call here.
+  // We just call props.onSubmit(point, expectedFloat) so the wizard can copy JSON.
   handleSubmit: (values, { props }) => {
     props.onSubmit(props.point, parseFloat(values.value))
   }

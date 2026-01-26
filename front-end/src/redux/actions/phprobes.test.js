@@ -7,6 +7,8 @@ import 'isomorphic-fetch'
 const middlewares = [thunk]
 const mockStore = configureMockStore(middlewares)
 
+const CHEMISTRY_PROBES_API = '/api/chemistryprobes'
+
 describe('probe actions', () => {
   afterEach(() => {
     fetchMock.reset()
@@ -30,7 +32,7 @@ describe('probe actions', () => {
   })
 
   it('fetchPhProbes', () => {
-    fetchMock.getOnce('/api/phprobes', {})
+    fetchMock.getOnce(CHEMISTRY_PROBES_API, {})
     const store = mockStore()
     return store.dispatch(fetchPhProbes()).then(() => {
       expect(store.getActions()).toEqual([phProbesLoaded({})])
@@ -38,7 +40,7 @@ describe('probe actions', () => {
   })
 
   it('fetchProbeReadings', () => {
-    fetchMock.getOnce('/api/phprobes/1/readings', {})
+    fetchMock.getOnce(CHEMISTRY_PROBES_API + '/1/readings', {})
     const store = mockStore()
     return store.dispatch(fetchProbeReadings('1')).then(() => {
       expect(store.getActions()).toEqual([probeReadingsLoaded('1')({})])
@@ -46,8 +48,8 @@ describe('probe actions', () => {
   })
 
   it('createProbe', () => {
-    fetchMock.putOnce('/api/phprobes', {})
-    fetchMock.getOnce('/api/phprobes', {})
+    fetchMock.putOnce(CHEMISTRY_PROBES_API, {})
+    fetchMock.getOnce(CHEMISTRY_PROBES_API, {})
     const store = mockStore()
     return store.dispatch(createProbe({})).then(() => {
       expect(store.getActions()).toEqual([phProbesLoaded({})])
@@ -55,8 +57,8 @@ describe('probe actions', () => {
   })
 
   it('updateProbe', () => {
-    fetchMock.postOnce('/api/phprobes/1', {})
-    fetchMock.getOnce('/api/phprobes', {})
+    fetchMock.postOnce(CHEMISTRY_PROBES_API + '/1', {})
+    fetchMock.getOnce(CHEMISTRY_PROBES_API, {})
     const store = mockStore()
     return store.dispatch(updateProbe('1')).then(() => {
       expect(store.getActions()).toEqual([phProbesLoaded({})])
@@ -64,7 +66,7 @@ describe('probe actions', () => {
   })
 
   it('calibrateProbe', () => {
-    fetchMock.postOnce('/api/phprobes/1/calibratepoint', {})
+    fetchMock.postOnce(CHEMISTRY_PROBES_API + '/1/calibratepoint', {})
     const store = mockStore()
     return store.dispatch(calibrateProbe('1')).then(() => {
       expect(store.getActions()).toEqual([probeCalibrated({})])
@@ -72,8 +74,8 @@ describe('probe actions', () => {
   })
 
   it('deleteProbe', () => {
-    fetchMock.deleteOnce('/api/phprobes/1', {})
-    fetchMock.getOnce('/api/phprobes', {})
+    fetchMock.deleteOnce(CHEMISTRY_PROBES_API + '/1', {})
+    fetchMock.getOnce(CHEMISTRY_PROBES_API, {})
     const store = mockStore()
     return store.dispatch(deleteProbe('1')).then(() => {
       expect(store.getActions()).toEqual([phProbesLoaded({})])

@@ -14,7 +14,9 @@
         "summary": "Shut down the raspberry pi.",
         "operationId": "adminPowerOff",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -27,7 +29,9 @@
         "summary": "Reboot the raspberry pi.",
         "operationId": "adminReboot",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -40,7 +44,9 @@
         "summary": "Download current reef-pi database.",
         "operationId": "dbExport",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       },
       "post": {
@@ -51,7 +57,9 @@
         "summary": "Import reef-pi database.",
         "operationId": "dbImport",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -64,7 +72,9 @@
         "summary": "Reload reef-pi.",
         "operationId": "adminReload",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -77,7 +87,9 @@
         "summary": "Upgrade reef-pi.",
         "operationId": "adminUpgrade",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -99,7 +111,9 @@
               }
             }
           },
-          "500": {}
+          "500": {
+            "description": ""
+          }
         }
       },
       "put": {
@@ -467,7 +481,9 @@
         "summary": "Get latest picture.",
         "operationId": "cameraLatest",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -480,7 +496,9 @@
         "summary": "List images.",
         "operationId": "cameraList",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -493,7 +511,9 @@
         "summary": "Shoot a picture.",
         "operationId": "cameraConfig",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -510,6 +530,283 @@
             "description": "capabilities",
             "schema": {
               "$ref": "#/definitions/capabilities"
+            }
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes": {
+      "get": {
+        "description": "List all chemistry probes in reef-pi.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "List all chemistry probes.",
+        "operationId": "chemistryProbeList",
+        "responses": {
+          "200": {
+            "description": "phProbe",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/phProbe"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "description": "Create a new chemistry probe.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Create a chemistry probe.",
+        "operationId": "chemistryProbeCreate",
+        "parameters": [
+          {
+            "description": "The chemistry probe to create",
+            "name": "phProbe",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/phProbe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes/{id}": {
+      "get": {
+        "description": "Get an existing chemistry probe by id.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Get a chemistry probe by id.",
+        "operationId": "chemistryProbeGet",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/phProbe"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "description": "Update an existing chemistry probe.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Update a chemistry probe.",
+        "operationId": "chemistryProbeUpdate",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to update",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The chemistry probe to update",
+            "name": "phProbe",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/phProbe"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete an existing chemistry probe.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Delete a chemistry probe.",
+        "operationId": "chemistryProbeDelete",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to delete",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes/{id}/calibrate": {
+      "post": {
+        "description": "Set calibration points for one or two point calibration",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Calibrate a chemistry probe.",
+        "operationId": "chemistryProbeCalibrate",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to calibrate",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The calibration measurements",
+            "name": "measurements",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "expected": {
+                    "description": "The expected value",
+                    "type": "float64",
+                    "format": "float"
+                  },
+                  "observed": {
+                    "description": "The actual value observed",
+                    "type": "float64",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes/{id}/calibratepoint": {
+      "post": {
+        "description": "Set a calibration point for one or two point calibration",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Calibrate a chemistry probe.",
+        "operationId": "chemistryProbeCalibrateSingle",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to calibrate",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The calibration measurement",
+            "name": "measurements",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/calibrationPoint"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes/{id}/read": {
+      "get": {
+        "description": "Get chemistry probe reading.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Get chemistry probe reading.",
+        "operationId": "chemistryProbeRead",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to read",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/chemistryprobes/{id}/readings": {
+      "get": {
+        "description": "Get chemistry probe readings.",
+        "tags": [
+          "ChemistryProbes"
+        ],
+        "summary": "Get chemistry probe readings.",
+        "operationId": "chemistryProbeReadings",
+        "parameters": [
+          {
+            "description": "The Id of the chemistry probe to delete",
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/statsResponse"
             }
           }
         }
@@ -632,7 +929,9 @@
         "summary": "Turn display off.",
         "operationId": "systemDisplayOff",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -645,7 +944,9 @@
         "summary": "Turn display on.",
         "operationId": "systemDisplayOn",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -905,7 +1206,9 @@
               }
             }
           },
-          "500": {}
+          "500": {
+            "description": ""
+          }
         }
       },
       "put": {
@@ -1301,7 +1604,9 @@
         "summary": "Clear errors.",
         "operationId": "errorsClear",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -1563,7 +1868,9 @@
               }
             }
           },
-          "500": {}
+          "500": {
+            "description": ""
+          }
         }
       },
       "put": {
@@ -2070,7 +2377,9 @@
         "summary": "Ping API.",
         "operationId": "meGet",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -2092,7 +2401,9 @@
               }
             }
           },
-          "500": {}
+          "500": {
+            "description": ""
+          }
         }
       },
       "put": {
@@ -2585,7 +2896,9 @@
         "summary": "List all temperature sensors.",
         "operationId": "tcsList",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -2863,7 +3176,9 @@
         "summary": "Test telemetry.",
         "operationId": "telemetryTest",
         "responses": {
-          "200": {}
+          "200": {
+            "description": ""
+          }
         }
       }
     },
@@ -3187,7 +3502,7 @@
       "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/camera"
     },
     "Mutex": {
-      "description": "A Mutex must not be copied after first use.",
+      "description": "A Mutex must not be copied after first use.\n\nIn the terminology of [the Go memory model],\nthe n'th call to [Mutex.Unlock] “synchronizes before” the m'th call to [Mutex.Lock]\nfor any n \u003c m.\nA successful call to [Mutex.TryLock] is equivalent to a call to Lock.\nA failed call to TryLock does not establish any “synchronizes before”\nrelation at all.\n\n[the Go memory model]: https://go.dev/ref/mem",
       "type": "object",
       "title": "A Mutex is a mutual exclusion lock.\nThe zero value for a Mutex is an unlocked mutex.",
       "x-go-package": "sync"
@@ -3210,7 +3525,7 @@
           "x-go-name": "Min"
         }
       },
-      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/ph"
+      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/temperature"
     },
     "ProfileSpec": {
       "type": "object",
@@ -3342,7 +3657,7 @@
         }
       },
       "x-go-name": "CalibrationPoint",
-      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/ph"
+      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/chemistry"
     },
     "cameraConfig": {
       "type": "object",
@@ -3661,9 +3976,7 @@
         },
         "parameters": {
           "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          },
+          "additionalProperties": {},
           "x-go-name": "Parameters"
         },
         "pinmap": {
@@ -3861,33 +4174,6 @@
       "x-go-name": "Jack",
       "x-go-package": "github.com/reef-pi/reef-pi/controller/device_manager/connectors"
     },
-    "light": {
-      "properties": {
-        "channels": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/channel"
-          },
-          "x-go-name": "Channels"
-        },
-        "enable": {
-          "type": "boolean",
-          "x-go-name": "Enable"
-        },
-        "id": {
-          "type": "string",
-          "x-go-name": "ID"
-        },
-        "jack": {
-          "type": "string",
-          "x-go-name": "Jack"
-        },
-        "name": {
-          "type": "string",
-          "x-go-name": "Name"
-        }
-      }
-    },
     "macro": {
       "type": "object",
       "properties": {
@@ -4005,6 +4291,11 @@
         "period": {
           "$ref": "#/definitions/Duration"
         },
+        "temp_sensor_id": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "TempSensorID"
+        },
         "transformer": {
           "type": "string",
           "x-go-name": "Transformer"
@@ -4015,7 +4306,7 @@
         }
       },
       "x-go-name": "Probe",
-      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/ph"
+      "x-go-package": "github.com/reef-pi/reef-pi/controller/modules/chemistry"
     },
     "pump": {
       "type": "object",

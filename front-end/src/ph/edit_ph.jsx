@@ -115,6 +115,24 @@ const EditPh = ({
             <ErrorFor errors={errors} touched={touched} name='analog_input' />
           </div>
         </div>
+		
+		<div className='col-12 col-sm-6 col-md-3'>
+		  <div className='form-group'>
+			<label htmlFor='temp_sensor_id'>Temp Sensor ID</label>
+			<Field
+			  name='temp_sensor_id'
+			  type='number'
+			  disabled={readOnly}
+			  className={classNames('form-control', {
+				'is-invalid': ShowError('temp_sensor_id', touched, errors)
+			  })}
+			/>
+			<small className='form-text text-muted'>
+			  Set to -1 to disable. Use your Temperature sensor ID (e.g. 2).
+			</small>
+			<ErrorFor errors={errors} touched={touched} name='temp_sensor_id' />
+		  </div>
+		</div>
 
         <div className='col-12 col-sm-6 col-md-3'>
           <div className='form-group'>

@@ -16,6 +16,7 @@ const PhForm = withFormik({
       id: data.id || '',
       name: data.name || '',
       analog_input: data.analog_input || '',
+	  temp_sensor_id: (data.temp_sensor_id !== undefined ? data.temp_sensor_id : -1),
       enable: (data.enable === undefined ? true : data.enable),
       period: data.period || 60,
       one_shot: data.one_shot || false,

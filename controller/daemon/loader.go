@@ -12,7 +12,7 @@ import (
 	"github.com/reef-pi/reef-pi/controller/modules/journal"
 	"github.com/reef-pi/reef-pi/controller/modules/lighting"
 	"github.com/reef-pi/reef-pi/controller/modules/macro"
-	"github.com/reef-pi/reef-pi/controller/modules/ph"
+	"github.com/reef-pi/reef-pi/controller/modules/chemistry"
 	"github.com/reef-pi/reef-pi/controller/modules/system"
 	"github.com/reef-pi/reef-pi/controller/modules/temperature"
 	"github.com/reef-pi/reef-pi/controller/modules/timer"
@@ -22,10 +22,11 @@ func (r *ReefPi) loadPhSubsystem() error {
 	if !r.settings.Capabilities.Ph {
 		return nil
 	}
-	p := ph.New(r.settings.Capabilities.DevMode, r)
-	r.subsystems.Load(ph.Bucket, p)
+	p := chemistry.New(r.settings.Capabilities.DevMode, r, r.temp)
+	r.subsystems.Load(chemistry.Bucket, p)
 	return nil
 }
+
 
 func (r *ReefPi) loadMacroSubsystem() error {
 	if !r.settings.Capabilities.Macro {
@@ -66,9 +67,12 @@ func (r *ReefPi) loadTemperatureSubsystem() error {
 		log.Println("ERROR: Failed to initialize temperature subsystem")
 		return err
 	}
+
+	r.temp = temp // save for PH to use
 	r.subsystems.Load(temperature.Bucket, temp)
 	return nil
 }
+
 
 func (r *ReefPi) loadATOSubsystem(eqs *equipment.Controller) error {
 	if !r.settings.Capabilities.ATO {
@@ -171,8 +175,8 @@ func (r *ReefPi) loadSubsystems() error {
 		r.LogError("subsystem-camera", "Failed to load camera subsystem. Error:"+err.Error())
 	}
 	if err := r.loadPhSubsystem(); err != nil {
-		log.Println("ERROR: Failed to load ph subsystem. Error:", err)
-		r.LogError("subsystem-ph", "Failed to load ph subsystem. Error:"+err.Error())
+		log.Println("ERROR: Failed to load chemistry subsystem. Error:", err)
+		r.LogError("subsystem-ph", "Failed to load chemistry subsystem. Error:"+err.Error())
 	}
 	if err := r.loadMacroSubsystem(); err != nil {
 		log.Println("ERROR: Failed to load macro subsystem. Error:", err)

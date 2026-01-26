@@ -79,7 +79,7 @@ const mapStateToProps = state => {
       // capabilities:..  are the subsytem names (plural or cathegory), corresponding to tab pages, whereas
       // function:... are individual devices in these cathegories
       { id: 'timers', name: i18n.t('capabilities:timers') },
-      { id: 'phprobes', name: i18n.t('capabilities:pH') },
+      { id: 'phprobes', name: i18n.t('capabilities:ph') },
       { id: 'ato', name: i18n.t('capabilities:ato') },
       { id: 'temperature', name: i18n.t('capabilities:temperature') },
       { id: 'lightings', name: i18n.t('capabilities:lighting') },

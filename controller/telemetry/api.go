@@ -9,11 +9,7 @@ import (
 	"github.com/reef-pi/reef-pi/controller/utils"
 )
 
-// TODO: translate these
-// TODO: this is a bit of a hack in that it means someone can't have their
-//
-//	actual token/password be the string "<stored>", but that seems rare
-//	enough a reasonable trade-off for a quick fix to unsaveable form bugs
+
 const PasswordStoredPlaceholder = "<stored>"
 const AdafruitIOTokenStoredPlaceholder = "<stored>"
 
@@ -37,26 +33,40 @@ func (t *telemetry) GetConfig(w http.ResponseWriter, req *http.Request) {
 func (t *telemetry) UpdateConfig(w http.ResponseWriter, req *http.Request) {
 	var c TelemetryConfig
 
+	// Try to read the existing config so we can preserve secrets if the UI sends "<stored>"
 	var existingConfig TelemetryConfig
-	var readErr = t.store.Get(t.bucket, DBKey, &existingConfig)
-	if readErr != nil {
-		if errors.Is(readErr, storage.ErrDoesNotExist) {
-			utils.ErrorResponse(http.StatusInternalServerError, "Failed to update. Error: "+readErr.Error(), w)
-			return
-		}
+	readErr := t.store.Get(t.bucket, DBKey, &existingConfig)
+
+	// "does not exist" is OK (we'll create a new config). Any other error is real.
+	if readErr != nil && !errors.Is(readErr, storage.ErrDoesNotExist) {
+		utils.ErrorResponse(http.StatusInternalServerError, "Failed to read existing config. Error: "+readErr.Error(), w)
+		return
 	}
 
 	fn := func(_ string) error {
-		if readErr != nil {
-			if c.AdafruitIO.Token == AdafruitIOTokenStoredPlaceholder {
+		// If the client sent placeholders, swap them back to the stored secret (if available).
+		// IMPORTANT: this should happen when readErr == nil (i.e. we successfully loaded existingConfig).
+		if c.AdafruitIO.Token == AdafruitIOTokenStoredPlaceholder {
+			if readErr == nil {
 				c.AdafruitIO.Token = existingConfig.AdafruitIO.Token
-			}
-			if c.Mailer.Password == PasswordStoredPlaceholder {
-				c.Mailer.Password = existingConfig.Mailer.Password
+			} else {
+				// no existing config to preserve; don't persist the placeholder
+				c.AdafruitIO.Token = ""
 			}
 		}
+
+		if c.Mailer.Password == PasswordStoredPlaceholder {
+			if readErr == nil {
+				c.Mailer.Password = existingConfig.Mailer.Password
+			} else {
+				// no existing config to preserve; don't persist the placeholder
+				c.Mailer.Password = ""
+			}
+		}
+
 		return t.store.Update(t.bucket, DBKey, c)
 	}
+
 	utils.JSONUpdateResponse(&c, fn, w, req)
 }
 

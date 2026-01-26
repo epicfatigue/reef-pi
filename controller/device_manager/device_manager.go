@@ -31,8 +31,9 @@ func New(s settings.Settings, store storage.Store, t telemetry.Telemetry) *Devic
 	mbus := i2c.MockBus()
 	mbus.Bytes = make([]byte, 2) // ph sensor expects two bytes
 	bus := i2c.Bus(mbus)
+
 	stats, err := host.Info()
-	if err == nil && strings.HasPrefix(stats.KernelArch, "arm") {
+	if err == nil && (strings.HasPrefix(stats.KernelArch, "arm") || stats.KernelArch == "aarch64") {
 		b, err := i2c.New()
 		if err != nil {
 			log.Println("ERROR: Failed to initialize i2c. Error:", err)
@@ -41,6 +42,15 @@ func New(s settings.Settings, store storage.Store, t telemetry.Telemetry) *Devic
 			bus = b
 		}
 	}
+
+	// Helpful debug line: confirms whether we're using mock or real i2c
+	log.Printf("device-manager: using i2c bus type: %T (KernelArch=%s)", bus, func() string {
+		if err != nil || stats == nil {
+			return "unknown"
+		}
+		return stats.KernelArch
+	}())
+
 	if s.RPI_PWMFreq <= 0 {
 		log.Println("ERROR: Invalid  RPI PWM frequency:", s.RPI_PWMFreq, " falling back on default 100Hz")
 		s.RPI_PWMFreq = 100
@@ -63,6 +73,7 @@ func New(s settings.Settings, store storage.Store, t telemetry.Telemetry) *Devic
 		telemetry: t,
 	}
 }
+
 
 func (dm *DeviceManager) Setup() error {
 	if err := dm.jacks.Setup(); err != nil {

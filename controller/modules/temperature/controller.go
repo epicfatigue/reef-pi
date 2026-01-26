@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
-
+	"strconv"
 	"github.com/reef-pi/hal"
 
 	"github.com/reef-pi/reef-pi/controller"
@@ -37,6 +37,7 @@ func New(devMode bool, c controller.Controller) (*Controller, error) {
 		statsMgr:    c.Telemetry().NewStatsManager(UsageBucket),
 	}, nil
 }
+
 
 func (c *Controller) Setup() error {
 	c.Lock()
@@ -128,4 +129,14 @@ func (c *Controller) InUse(depType, id string) ([]string, error) {
 
 func (c *Controller) GetEntity(id string) (controller.Entity, error) {
 	return nil, fmt.Errorf("temperature subsystem does not support 'GetEntity' interface")
+}
+
+
+// ReadByID reads a temperature sensor by numeric ID (e.g. 2) and returns the latest temperature.
+func (c *Controller) ReadByID(id int) (float64, error) {
+	tc, err := c.Get(strconv.Itoa(id))
+	if err != nil {
+		return 0, err
+	}
+	return c.Read(tc)
 }

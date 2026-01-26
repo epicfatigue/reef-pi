@@ -80,6 +80,17 @@ export const rootReducer = (state, action) => {
     case 'PH_PROBE_READING_COMPLETE':
       phReading[action.payload.id] = action.payload.reading
       return { ...state, ph_reading: { ...phReading } }
+	case 'PROBE_SNAPSHOT_LOADED': {
+      const s = action.payload
+      // payload shape is SnapshotResponse: { probe_id, at, value, unit, signals, meta, notes }
+      return {
+        ...state,
+        phprobe_snapshots: {
+          ...state.phprobe_snapshots,
+          [s.probe_id]: s,
+        },
+      }
+    }
     case 'CAPABILITIES_LOADED':
       return { ...state, capabilities: action.payload }
     case 'SETTINGS_LOADED':

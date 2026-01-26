@@ -49,3 +49,9 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 )
+
+replace github.com/reef-pi/drivers => /home/reefpi/dev/drivers
+
+replace github.com/reef-pi/rpi => /home/reefpi/dev/rpi
+
+replace github.com/reef-pi/hal => /home/reefpi/dev/hal

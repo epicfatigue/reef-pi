@@ -8,10 +8,9 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-
 	"github.com/reef-pi/reef-pi/controller/utils"
+	"strconv"
 )
 
 func (c *Controller) Read(tc *TC) (float64, error) {
@@ -42,6 +41,8 @@ func (c *Controller) Read(tc *TC) (float64, error) {
 
 	return v, err
 }
+
+
 
 func (t *TC) readTemperature(fi io.Reader) (float64, error) {
 	reader := bufio.NewReader(fi)

@@ -30,6 +30,20 @@ type AnalogInputs struct {
 	drivers *drivers.Drivers
 }
 
+// Temperature Update
+func (ais *AnalogInputs) AnalogInputPin(id string) (hal.AnalogInputPin, error) {
+	j, err := ais.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	ch, err := j.channel(ais.drivers)
+	if err != nil {
+		return nil, fmt.Errorf("pin %d on analog input %s has no driver: %v", j.Pin, id, err)
+	}
+	return ch, nil
+}
+
+
 func (j AnalogInput) channel(drvrs *drivers.Drivers) (hal.AnalogInputPin, error) {
 	d, err := drvrs.AnalogInputDriver(j.Driver)
 	if err != nil {

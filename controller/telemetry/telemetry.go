@@ -29,7 +29,10 @@ type Telemetry interface {
 	EmitMetric(string, string, float64)
 	CreateFeedIfNotExist(string)
 	DeleteFeedIfExist(string)
+
+	// IMPORTANT: this must use the instrumented stats manager constructor in stats_manager.go
 	NewStatsManager(string) StatsManager
+
 	SendTestMessage(http.ResponseWriter, *http.Request)
 	GetConfig(http.ResponseWriter, *http.Request)
 	UpdateConfig(http.ResponseWriter, *http.Request)
@@ -131,14 +134,14 @@ func NewTelemetry(name, bucket string, store storage.Store, config TelemetryConf
 	return t
 }
 
+// FIX: DO NOT instantiate &mgr{} directly here.
+// This bypasses your debug/instrumentation and is why you never saw telemetry.stats logs.
+// Always go through the instrumented constructor in stats_manager.go:
+//
+//   func NewStatsManager(store storage.Store, bucket string, currentLimit, historicalLimit int) StatsManager
+//
 func (t *telemetry) NewStatsManager(b string) StatsManager {
-	return &mgr{
-		inMemory:        make(map[string]Stats),
-		bucket:          b,
-		store:           t.store,
-		HistoricalLimit: t.config.HistoricalLimit,
-		CurrentLimit:    t.config.CurrentLimit,
-	}
+	return NewStatsManager(t.store, b, t.config.CurrentLimit, t.config.HistoricalLimit)
 }
 
 func (t *telemetry) updateAlertStats(subject string) AlertStats {
