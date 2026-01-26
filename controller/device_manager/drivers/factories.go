@@ -5,9 +5,10 @@ import (
 	"log"
 	"github.com/reef-pi/drivers/robotank_conductivity"
 	"github.com/reef-pi/drivers/robotank_ph"
-    "github.com/reef-pi/drivers/aliexpress_ph"
+	"github.com/reef-pi/drivers/aliexpress_ph"
 	"github.com/reef-pi/drivers/aliexpress_orp"
 	"github.com/reef-pi/drivers/ads1115tds"
+	"github.com/reef-pi/drivers/pcf8575"
 	"github.com/reef-pi/drivers/tasmota"
 	"github.com/reef-pi/drivers/ads1x15"
 	"github.com/reef-pi/drivers/dli"
@@ -25,11 +26,12 @@ import (
 )
 
 var driversMap = map[string]hal.DriverFactory{
-    "robotank-conductivity": robotank_conductivity.Factory(),
+	"robotank-conductivity": robotank_conductivity.Factory(),
 	"robotank-ph": robotank_ph.Factory(),
-    "aliexpress-ph":  aliexpress_ph.Factory(),
-    "aliexpress-orp": aliexpress_orp.Factory(),
-    "ads1115-tds": ads1115tds.Factory(),
+	"aliexpress-ph":  aliexpress_ph.Factory(),
+	"aliexpress-orp": aliexpress_orp.Factory(),
+	"ads1115-tds": ads1115tds.Factory(),
+	"pcf8575": pcf8575.Factory(),
 	"ads1015":      ads1x15.Ads1015Factory(),
 	"ads1115":      ads1x15.Ads1115Factory(),
 	"dli-wpsp":     dli.Adapter(),
