@@ -96,3 +96,15 @@ export const tcCalibrated = () => {
     type: 'TC_CALIBRATED'
   })
 }
+
+export const clearTCUsage = (id) => {
+  return (reduxPost({
+    url: '/api/tcs/' + id + '/usage/clear',
+    success: () => (dispatch) => {
+      dispatch(fetchTCUsage(id))
+      return dispatch(readTC(id))
+    }
+  }))
+}
+
+

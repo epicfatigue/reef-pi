@@ -1,6 +1,15 @@
 import React from 'react'
 import TemperatureForm from './temperature_form'
-import { fetchSensors, createTC, deleteTC, updateTC, fetchTCs, readTC, calibrateTemperature } from 'redux/actions/tcs'
+import {
+  fetchSensors,
+  createTC,
+  deleteTC,
+  updateTC,
+  fetchTCs,
+  readTC,
+  calibrateTemperature,
+  clearTCUsage
+} from 'redux/actions/tcs'
 import { connect } from 'react-redux'
 import { fetchEquipment } from 'redux/actions/equipment'
 import Collapsible from '../ui_components/collapsible'
@@ -19,11 +28,10 @@ class main extends React.Component {
       currentProbe: null,
       defaultCalibrationPoint: ''
     }
+
     this.probeList = this.probeList.bind(this)
     this.handleToggleAddProbeDiv = this.handleToggleAddProbeDiv.bind(this)
     this.handleDelete = this.handleDelete.bind(this)
-    // for future use
-    // this.handleReset = this.handleReset.bind(this)
     this.handleCreate = this.handleCreate.bind(this)
     this.handleUpdate = this.handleUpdate.bind(this)
     this.dismissModal = this.dismissModal.bind(this)
@@ -34,19 +42,18 @@ class main extends React.Component {
     this.props.fetchSensors()
     this.props.fetchTCs()
     this.props.fetchEquipment()
+
     this.props.probes.forEach(probe => {
       this.props.readTC(probe.id)
     })
   }
 
   handleToggleAddProbeDiv () {
-    this.setState({
-      addProbe: !this.state.addProbe
-    })
+    this.setState({ addProbe: !this.state.addProbe })
   }
 
   valuesToProbe (values) {
-    const payload = {
+    return {
       name: values.name,
       enable: values.enable,
       control: (values.control === 'macro' || values.control === 'equipment'),
@@ -71,33 +78,45 @@ class main extends React.Component {
         ymax: parseFloat(values.chart.ymax)
       }
     }
-    return payload
   }
 
   probeList () {
     return this.props.probes
       .sort((a, b) => SortByName(a, b))
       .map(probe => {
-        const calibrationButton = (
-          <button
-            type='button'
-            name={'calibrate-probe-' + probe.id}
-            className='btn btn-sm btn-outline-info float-right'
-            onClick={e => this.calibrateProbe(e, probe)}
-          >
-            {i18next.t('temperature:calibrate')}
-          </button>
+        const actionButtons = (
+          <div className='btn-group float-right' role='group' aria-label='temperature actions'>
+            <button
+              type='button'
+              name={'calibrate-probe-' + probe.id}
+              className='btn btn-sm btn-outline-info'
+              onClick={e => this.calibrateProbe(e, probe)}
+            >
+              {i18next.t('temperature:calibrate')}
+            </button>
+
+            <button
+              type='button'
+              name={'clear-tc-usage-' + probe.id}
+              className='btn btn-sm btn-outline-danger'
+              onClick={e => this.clearUsage(e, probe)}
+            >
+              Clear usage
+            </button>
+          </div>
         )
+
         const handleToggleState = () => {
           probe.enable = !probe.enable
           this.props.update(probe.id, probe)
         }
+
         return (
           <Collapsible
             key={'panel-temperature-' + probe.id}
             name={'panel-temperature-' + probe.id}
             item={probe}
-            buttons={calibrationButton}
+            buttons={actionButtons}
             title={<b className='ml-2 align-middle'>{probe.name} </b>}
             onDelete={this.handleDelete}
             onToggleState={handleToggleState}
@@ -117,6 +136,9 @@ class main extends React.Component {
   }
 
   calibrateProbe (e, probe) {
+    e.preventDefault()
+    e.stopPropagation()
+
     let defaultValue = ''
     if (probe.calibration_points && probe.calibration_points[0]) {
       defaultValue = probe.calibration_points[0].expected
@@ -127,6 +149,28 @@ class main extends React.Component {
       showCalibrate: true,
       defaultCalibrationPoint: defaultValue
     })
+  }
+
+  clearUsage (e, probe) {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const message = (
+      <div>
+        <p>
+          Clear usage history for <b>{probe.name}</b>?
+        </p>
+        <p className='text-muted mb-0'>
+          This will wipe the stored temperature usage/chart history. New data will start accumulating again immediately.
+        </p>
+      </div>
+    )
+
+    confirm(i18next.t('confirm'), { description: message }).then(
+      function () {
+        return this.props.clearTCUsage(probe.id)
+      }.bind(this)
+    )
   }
 
   dismissModal () {
@@ -154,22 +198,6 @@ class main extends React.Component {
     this.handleToggleAddProbeDiv()
   }
 
-  // for future use :-)
-  //  handleReset (probe) {
-  //    const message = (
-  //      <div>
-  //        <p>
-  //          {i18next.t('temperature:warn_reset', {name: probe.name})}
-  //        </p>
-  //      </div>
-  //    )
-  //    confirm(i18next.t('reset'), { description: message }).then(
-  //      function () {
-  //        this.props.reset(probe.id)
-  //      }.bind(this)
-  //    )
-  //  }
-
   handleDelete (probe) {
     const message = (
       <div>
@@ -178,6 +206,7 @@ class main extends React.Component {
         </p>
       </div>
     )
+
     confirm(i18next.t('delete'), { description: message }).then(
       function () {
         this.props.delete(probe.id)
@@ -257,7 +286,8 @@ const mapDispatchToProps = dispatch => {
     delete: id => dispatch(deleteTC(id)),
     update: (id, t) => dispatch(updateTC(id, t)),
     readTC: id => dispatch(readTC(id)),
-    calibrateSensor: (id, t) => dispatch(calibrateTemperature(id, t))
+    calibrateSensor: (id, t) => dispatch(calibrateTemperature(id, t)),
+    clearTCUsage: id => dispatch(clearTCUsage(id))
   }
 }
 
@@ -265,4 +295,5 @@ const Main = connect(
   mapStateToProps,
   mapDispatchToProps
 )(main)
+
 export default Main

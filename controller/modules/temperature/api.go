@@ -125,6 +125,23 @@ func (t *Controller) LoadAPI(r *mux.Router) {
 	// 404:
 	//  description: Not Found
 	r.HandleFunc("/api/tcs/{id}", t.update).Methods("POST")
+	
+	// swagger:operation POST /api/tcs/{id}/usage/clear Temperature tcsUsageClear
+	// Clear usage history.
+	// Deletes stored usage history for a given temperature controller.
+	// ---
+	// parameters:
+	//  - in: path
+	//    name: id
+	//    description: The Id of the temperature controller
+	//    required: true
+	//    schema:
+	//     type: integer
+	// responses:
+	//  200:
+	//   description: OK
+	r.HandleFunc("/api/tcs/{id}/usage/clear", t.clearUsage).Methods("POST")
+
 
 	// swagger:operation DELETE /api/tcs/{id} Temperature tcsDelete
 	// Delete a temperature controller.
@@ -270,6 +287,18 @@ func (t *Controller) getUsage(w http.ResponseWriter, r *http.Request) {
 	fn := func(id string) (interface{}, error) { return t.statsMgr.Get(id) }
 	utils.JSONGetResponse(fn, w, r)
 }
+
+func (t *Controller) clearUsage(w http.ResponseWriter, r *http.Request) {
+	fn := func(id string) (interface{}, error) {
+		if err := t.statsMgr.Delete(id); err != nil {
+			return nil, err
+		}
+		t.statsMgr.Initialize(id)
+		return map[string]string{"status": "ok"}, nil
+	}
+	utils.JSONGetResponse(fn, w, r)
+}
+
 
 func (c *Controller) update(w http.ResponseWriter, r *http.Request) {
 	var t TC
