@@ -116,6 +116,40 @@ func (e *Controller) LoadAPI(r *mux.Router) {
 	//   schema:
 	//    $ref: '#/definitions/statsResponse'
 	r.HandleFunc("/api/phprobes/{id}/readings", e.getReadings).Methods("GET")
+	
+	// swagger:operation POST /api/phprobes/{id}/readings/clear PhProbes phProbeReadingsClear
+	// Clear ph probe readings (usage history).
+	// Deletes stored readings so graphs and history start fresh.
+	// Legacy alias of /api/chemistryprobes/{id}/readings/clear.
+	// ---
+	// parameters:
+	//  - in: path
+	//    name: id
+	//    description: The Id of the ph probe
+	//    required: true
+	//    schema:
+	//     type: integer
+	// responses:
+	//  200:
+	//   description: OK
+	r.HandleFunc("/api/phprobes/{id}/readings/clear", e.clearReadings).Methods("POST")
+
+	// swagger:operation POST /api/chemistryprobes/{id}/readings/clear ChemistryProbes chemistryProbeReadingsClear
+	// Clear chemistry probe readings (usage history).
+	// Deletes stored readings so graphs and history start fresh.
+	// ---
+	// parameters:
+	//  - in: path
+	//    name: id
+	//    description: The Id of the chemistry probe
+	//    required: true
+	//    schema:
+	//     type: integer
+	// responses:
+	//  200:
+	//   description: OK
+	r.HandleFunc("/api/chemistryprobes/{id}/readings/clear", e.clearReadings).Methods("POST")
+
 
 	// swagger:operation POST /api/phprobes/{id}/calibrate PhProbes phProbeCalibrate
 	// Calibrate a ph probe.
@@ -432,6 +466,22 @@ func (c *Controller) getProbe(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) getReadings(w http.ResponseWriter, r *http.Request) {
 	fn := func(id string) (interface{}, error) { return c.statsMgr.Get(id) }
+	utils.JSONGetResponse(fn, w, r)
+}
+
+func (c *Controller) clearReadings(w http.ResponseWriter, r *http.Request) {
+	fn := func(id string) (interface{}, error) {
+		// Delete the stored stats series for this probe id.
+		if err := c.statsMgr.Delete(id); err != nil {
+			return nil, err
+		}
+
+		// Re-create in-memory entry so next Update/Save behaves predictably.
+		// (Optional, but nice.)
+		c.statsMgr.Initialize(id)
+
+		return map[string]string{"status": "ok"}, nil
+	}
 	utils.JSONGetResponse(fn, w, r)
 }
 

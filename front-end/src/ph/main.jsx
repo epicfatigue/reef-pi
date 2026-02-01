@@ -1,5 +1,5 @@
 import React from 'react'
-import { fetchPhProbes, createProbe, updateProbe, deleteProbe, readProbe, fetchProbeSnapshot } from 'redux/actions/phprobes'
+import { fetchPhProbes, createProbe, updateProbe, deleteProbe, readProbe, fetchProbeSnapshot, clearProbeReadings  } from 'redux/actions/phprobes'
 import { connect } from 'react-redux'
 import PhForm from './ph_form'
 import Collapsible from '../ui_components/collapsible'
@@ -41,17 +41,28 @@ class Chemistry extends React.Component {
       .map(probe => {
         const handleToggleState = () => this.toggleProbeEnabled(probe)
 
-        const calibrationButton = (
-          <button
-            type='button'
-            name={'calibrate-probe-' + probe.id}
-            disabled={probe.enable}
-            title={probe.enable ? 'Ph probe must be disabled before calibration' : null}
-            className='btn btn-sm btn-outline-info float-right'
-            onClick={e => this.calibrateProbe(e, probe)}
-          >
-            {i18next.t('ph:calibrate')}
-          </button>
+        const actionButtons = (
+          <div className='btn-group float-right' role='group' aria-label='probe actions'>
+            <button
+              type='button'
+              name={'calibrate-probe-' + probe.id}
+              disabled={probe.enable}
+              title={probe.enable ? 'Ph probe must be disabled before calibration' : null}
+              className='btn btn-sm btn-outline-info'
+              onClick={e => this.calibrateProbe(e, probe)}
+            >
+              {i18next.t('ph:calibrate')}
+            </button>
+
+            <button
+              type='button'
+              name={'clear-probe-readings-' + probe.id}
+              className='btn btn-sm btn-outline-danger'
+              onClick={e => this.clearReadings(e, probe)}
+            >
+              Clear usage
+            </button>
+          </div>
         )
 
         return (
@@ -59,7 +70,7 @@ class Chemistry extends React.Component {
             key={'panel-ph-' + probe.id}
             name={'panel-ph-' + probe.id}
             item={probe}
-            buttons={calibrationButton}
+            buttons={actionButtons}
             title={<b className='ml-2 align-middle'>{probe.name} </b>}
             onDelete={this.handleDeleteProbe}
             onToggleState={handleToggleState}
@@ -79,11 +90,38 @@ class Chemistry extends React.Component {
   }
 
   calibrateProbe (e, probe) {
-    // Open modal first, then fetch snapshot (wizard also polls, but this makes it feel instant)
-    this.setState({ currentProbe: probe, showCalibrate: true }, () => {
-      this.props.fetchProbeSnapshot(probe.id)
-      this.props.readProbe(probe.id)
-    })
+	e.preventDefault()
+	e.stopPropagation()
+
+	// Open modal first, then fetch snapshot
+	// (wizard also polls, but this makes it feel instant)
+	this.setState({ currentProbe: probe, showCalibrate: true }, () => {
+	this.props.fetchProbeSnapshot(probe.id)
+	this.props.readProbe(probe.id)
+	})
+ }
+
+
+  clearReadings (e, probe) {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const message = (
+      <div>
+        <p>
+          Clear readings history for <b>{probe.name}</b>?
+        </p>
+        <p className='text-muted mb-0'>
+          This will wipe the stored chart/history data. New readings will start accumulating again immediately.
+        </p>
+      </div>
+    )
+
+    confirm(i18next.t('confirm'), { description: message }).then(
+      function () {
+        return this.props.clearProbeReadings(probe.id)
+      }.bind(this)
+    )
   }
 
   dismissModal () {
@@ -224,9 +262,11 @@ const mapDispatchToProps = dispatch => {
     delete: id => dispatch(deleteProbe(id)),
     update: (id, t) => dispatch(updateProbe(id, t)),
     readProbe: id => dispatch(readProbe(id)),
-    fetchProbeSnapshot: id => dispatch(fetchProbeSnapshot(id))
+    fetchProbeSnapshot: id => dispatch(fetchProbeSnapshot(id)),
+    clearProbeReadings: id => dispatch(clearProbeReadings(id))
   }
 }
+
 
 const Ph = connect(
   mapStateToProps,

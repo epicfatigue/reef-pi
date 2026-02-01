@@ -80,6 +80,14 @@ export const fetchProbeReadings = (id) => {
   }))
 }
 
+export const clearProbeReadings = (id) => {
+  return (reduxPost({
+    url: CHEMISTRY_PROBES_API + '/' + id + '/readings/clear',
+    success: () => fetchProbeReadings(id)
+  }))
+}
+
+
 export const updateProbe = (id, a) => {
   return (reduxPost({
     url: CHEMISTRY_PROBES_API + '/' + id,
