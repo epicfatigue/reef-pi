@@ -1,3 +1,4 @@
+//probe.go
 package chemistry
 
 import (
@@ -51,23 +52,38 @@ type TemperatureSetter interface {
 
 // swagger:model phProbe
 type Probe struct {
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Enable       bool          `json:"enable"`
-	Period       time.Duration `json:"period"`
-	AnalogInput  string        `json:"analog_input"`
-	Control      bool          `json:"control"`
-	Notify       Notify        `json:"notify"`
-	UpperEq      string        `json:"upper_eq"`
-	DownerEq     string        `json:"downer_eq"`
-	Min          float64       `json:"min"`
-	Max          float64       `json:"max"`
-	Hysteresis   float64       `json:"hysteresis"`
-	IsMacro      bool          `json:"is_macro"`
-	OneShot      bool          `json:"one_shot"`
-	Chart        ChartConfig   `json:"chart"`
-	Transformer  string        `json:"transformer"`
-	TempSensorID int           `json:"temp_sensor_id"` // reef-pi temperature sensor ID, -1 = disabled
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Enable      bool          `json:"enable"`
+	Period      time.Duration `json:"period"`
+	AnalogInput string        `json:"analog_input"`
+
+	// If Control is true, reef-pi uses Homeostasis to keep this probe within [Min, Max].
+	Control bool `json:"control"`
+
+	// New (future-proof): which subsystem Homeostasis should toggle.
+	// Supported values:
+	//   ""           -> legacy behavior (uses IsMacro)
+	//   "equipment"  -> equipment subsystem (like before)
+	//   "macro"      -> macro subsystem (like before)
+	//   "ato"        -> ato subsystem (NEW: allows Homeostasis to enable/disable ATOs)
+	ControlType string `json:"control_type"`
+
+	Notify   Notify `json:"notify"`
+	UpperEq  string `json:"upper_eq"`
+	DownerEq string `json:"downer_eq"`
+
+	Min        float64 `json:"min"`
+	Max        float64 `json:"max"`
+	Hysteresis float64 `json:"hysteresis"`
+
+	// Legacy: used when ControlType == "".
+	IsMacro bool `json:"is_macro"`
+
+	OneShot      bool        `json:"one_shot"`
+	Chart        ChartConfig `json:"chart"`
+	Transformer  string      `json:"transformer"`
+	TempSensorID int         `json:"temp_sensor_id"` // reef-pi temperature sensor ID, -1 = disabled
 
 	h *controller.Homeostasis
 }
@@ -82,6 +98,9 @@ func (p *Probe) loadHomeostasis(c controller.Controller) {
 		Period:     int(p.Period),
 		IsMacro:    p.IsMacro,
 		Hysteresis: p.Hysteresis,
+
+		// NEW: tells Homeostasis which subsystem to control (equipment/macro/ato).
+		ControlType: p.ControlType,
 	}
 	p.h = controller.NewHomeostasis(c, hConf)
 }
@@ -115,6 +134,17 @@ func (p Probe) Validate() error {
 	if p.Period <= 0 {
 		return fmt.Errorf("Period should be positive. Supplied: %d", p.Period)
 	}
+
+	// Validate optional control_type (avoid silent typos)
+	if p.ControlType != "" {
+		switch p.ControlType {
+		case "equipment", "macro", "ato":
+			// ok
+		default:
+			return fmt.Errorf("invalid control_type '%s' (expected 'equipment', 'macro', 'ato', or empty for legacy)", p.ControlType)
+		}
+	}
+
 	if p.Transformer != "" {
 		expr, err := govaluate.NewEvaluableExpression(p.Transformer)
 		parameters := make(map[string]interface{}, 1)
@@ -128,6 +158,7 @@ func (p Probe) Validate() error {
 			return fmt.Errorf("invalid transformer expression '%s'. failed to typecast result '%v' into float64", p.Transformer, result)
 		}
 	}
+
 	// TempSensorID can be -1 (disabled) or a valid temp sensor id (>=0)
 	if p.TempSensorID < -1 {
 		return fmt.Errorf("TempSensorID must be -1 (disabled) or >= 0. Supplied: %d", p.TempSensorID)

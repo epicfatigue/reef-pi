@@ -1,5 +1,6 @@
 import React from 'react'
-import { fetchPhProbes, createProbe, updateProbe, deleteProbe, readProbe, fetchProbeSnapshot, clearProbeReadings  } from 'redux/actions/phprobes'
+import { fetchPhProbes, createProbe, updateProbe, deleteProbe, readProbe, fetchProbeSnapshot, clearProbeReadings } from 'redux/actions/phprobes'
+import { fetchATOs } from 'redux/actions/ato'
 import { connect } from 'react-redux'
 import PhForm from './ph_form'
 import Collapsible from '../ui_components/collapsible'
@@ -27,6 +28,8 @@ class Chemistry extends React.Component {
 
   componentDidMount () {
     this.props.fetchPhProbes()
+    // NEW: load ATO list so EditPh can show them in dropdowns
+    this.props.fetchATOs()
   }
 
   // IMPORTANT: never mutate probe objects coming from redux store
@@ -83,6 +86,8 @@ class Chemistry extends React.Component {
               probe={probe}
               macros={this.props.macros}
               equipment={this.props.equipment}
+              // NEW:
+              atos={this.props.atos}
             />
           </Collapsible>
         )
@@ -90,17 +95,16 @@ class Chemistry extends React.Component {
   }
 
   calibrateProbe (e, probe) {
-	e.preventDefault()
-	e.stopPropagation()
+    e.preventDefault()
+    e.stopPropagation()
 
-	// Open modal first, then fetch snapshot
-	// (wizard also polls, but this makes it feel instant)
-	this.setState({ currentProbe: probe, showCalibrate: true }, () => {
-	this.props.fetchProbeSnapshot(probe.id)
-	this.props.readProbe(probe.id)
-	})
- }
-
+    // Open modal first, then fetch snapshot
+    // (wizard also polls, but this makes it feel instant)
+    this.setState({ currentProbe: probe, showCalibrate: true }, () => {
+      this.props.fetchProbeSnapshot(probe.id)
+      this.props.readProbe(probe.id)
+    })
+  }
 
   clearReadings (e, probe) {
     e.preventDefault()
@@ -128,33 +132,55 @@ class Chemistry extends React.Component {
     this.setState({ currentProbe: null, showCalibrate: false })
   }
 
-  valuesToProbe (values) {
-    const probe = {
-      name: values.name,
-      enable: values.enable,
-      period: values.period,
-      analog_input: values.analog_input,
-      temp_sensor_id: parseInt(values.temp_sensor_id || -1, 10),
-      notify: {
-        enable: values.notify,
-        min: parseFloat(values.minAlert),
-        max: parseFloat(values.maxAlert)
-      },
-      chart: values.chart,
-      control: (values.control === 'macro' || values.control === 'equipment'),
-      is_macro: (values.control === 'macro'),
-      one_shot: values.one_shot || false,
-      min: parseFloat(values.lowerThreshold),
-      downer_eq: values.lowerFunction,
-      max: parseFloat(values.upperThreshold),
-      upper_eq: values.upperFunction,
-      transformer: values.transformer,
-      hysteresis: parseFloat(values.hysteresis),
-      chart_y_min: parseInt(values.chart_y_min),
-      chart_y_max: parseInt(values.chart_y_max)
-    }
-    return probe
-  }
+	valuesToProbe (values) {
+	  const controlType = values.control || '' // '' | 'equipment' | 'macro' | 'ato'
+	  const isATO = (controlType === 'ato')
+
+	  const probe = {
+		name: values.name,
+		enable: values.enable,
+		period: values.period,
+		analog_input: values.analog_input,
+		temp_sensor_id: parseInt(values.temp_sensor_id || -1, 10),
+		notify: {
+		  enable: values.notify,
+		  min: parseFloat(values.minAlert),
+		  max: parseFloat(values.maxAlert)
+		},
+		chart: values.chart,
+
+		// Control enable flag
+		control: (controlType === 'equipment' || controlType === 'macro' || controlType === 'ato'),
+
+		// Legacy field (only for old behaviour)
+		is_macro: (controlType === 'macro'),
+
+		// NEW: preferred behaviour
+		control_type: controlType,
+
+		one_shot: values.one_shot || false,
+
+		min: parseFloat(values.lowerThreshold),
+		downer_eq: values.lowerFunction,
+
+		max: parseFloat(values.upperThreshold),
+		upper_eq: values.upperFunction,
+
+		transformer: values.transformer,
+		hysteresis: parseFloat(values.hysteresis),
+		chart_y_min: parseInt(values.chart_y_min),
+		chart_y_max: parseInt(values.chart_y_max),
+
+		// NEW: only meaningful for ATO mode-switching
+		// If user selects ATO, this decides what happens when value comes back in-range.
+		// true  => disable both ATOs when in-range
+		// false => leave last-selected ATO enabled (safer for continuous topoff)
+		ato_in_range_disable: isATO ? !!values.ato_in_range_disable : false
+	  }
+
+	  return probe
+	}
+
 
   handleUpdateProbe (values) {
     const payload = this.valuesToProbe(values)
@@ -197,6 +223,8 @@ class Chemistry extends React.Component {
           onSubmit={this.handleCreateProbe}
           macros={this.props.macros}
           equipment={this.props.equipment}
+          // NEW:
+          atos={this.props.atos}
         />
       )
     }
@@ -251,6 +279,8 @@ const mapStateToProps = state => {
     currentReading: state.ph_reading,
     macros: state.macros,
     equipment: state.equipment,
+    // NEW: assumes reducer key is "atos"
+    atos: state.atos,
     snapshots: state.phprobe_snapshots || {}
   }
 }
@@ -258,6 +288,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
   return {
     fetchPhProbes: () => dispatch(fetchPhProbes()),
+    fetchATOs: () => dispatch(fetchATOs()),
     create: t => dispatch(createProbe(t)),
     delete: id => dispatch(deleteProbe(id)),
     update: (id, t) => dispatch(updateProbe(id, t)),
@@ -266,7 +297,6 @@ const mapDispatchToProps = dispatch => {
     clearProbeReadings: id => dispatch(clearProbeReadings(id))
   }
 }
-
 
 const Ph = connect(
   mapStateToProps,

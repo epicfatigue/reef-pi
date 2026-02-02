@@ -1,3 +1,4 @@
+// Homeostasis.go
 package controller
 
 import (
@@ -6,10 +7,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/reef-pi/reef-pi/controller/utils"
-
 	"github.com/reef-pi/reef-pi/controller/storage"
 	"github.com/reef-pi/reef-pi/controller/telemetry"
+	"github.com/reef-pi/reef-pi/controller/utils"
 )
 
 type target uint
@@ -61,14 +61,58 @@ func (o1 Observation) Before(o2 telemetry.Metric) bool {
 	return o1.Time.Before(o.Time)
 }
 
+// HomeoStasisConfig defines control behavior.
+// Historically reef-pi used IsMacro + Upper/Downer IDs.
+// We keep IsMacro for backward compatibility, but introduce ControlType for extensibility.
 type HomeoStasisConfig struct {
 	Name       string
-	IsMacro    bool
-	Period     int
 	Upper      string
 	Downer     string
-	Min, Max   float64
+	Min        float64
+	Max        float64
+	Period     int
 	Hysteresis float64
+
+	// Legacy:
+	// If ControlType is empty, IsMacro decides which subsystem to toggle:
+	//   IsMacro=true  -> macro subsystem
+	//   IsMacro=false -> equipment subsystem
+	IsMacro bool
+
+	// New:
+	//   "equipment" | "macro" | "ato"
+	ControlType string
+
+	// ATO mode-switch support:
+	// If ControlType == "ato" and ATOInRangeDisable == false,
+	// we DO NOT disable both "actuators" when the value returns in range.
+	// This lets ATO mode behave like a selector: keep last chosen ATO enabled.
+	ATORaiseID        int
+	ATOLowerID        int
+	ATOInRangeDisable bool
+}
+
+// effectiveControlType resolves which control target type to use, keeping old configs working.
+func (c HomeoStasisConfig) effectiveControlType() string {
+	if c.ControlType != "" {
+		return c.ControlType
+	}
+	if c.IsMacro {
+		return "macro"
+	}
+	return "equipment"
+}
+
+// shouldDisableInRange decides whether we switch everything off when the value returns in range.
+func (c HomeoStasisConfig) shouldDisableInRange() bool {
+	// Only special-case ATO mode:
+	// - If ATOInRangeDisable=false: latch (keep last selection enabled)
+	// - If ATOInRangeDisable=true : disable like normal
+	if c.effectiveControlType() == "ato" {
+		return c.ATOInRangeDisable
+	}
+	// Equipment/macro keep classic reef-pi behavior: disable in-range
+	return true
 }
 
 type Homeostasis struct {
@@ -76,6 +120,7 @@ type Homeostasis struct {
 	t          telemetry.Telemetry
 	eqs        Subsystem
 	macros     Subsystem
+	atos       Subsystem
 	pastTarget target
 }
 
@@ -85,6 +130,7 @@ func NewHomeostasis(c Controller, config HomeoStasisConfig) *Homeostasis {
 		t:          c.Telemetry(),
 		eqs:        NoopSubsystem(),
 		macros:     NoopSubsystem(),
+		atos:       NoopSubsystem(),
 		pastTarget: noTarget,
 	}
 	if sub, err := c.Subsystem(storage.MacroBucket); err == nil {
@@ -93,23 +139,30 @@ func NewHomeostasis(c Controller, config HomeoStasisConfig) *Homeostasis {
 	if sub, err := c.Subsystem(storage.EquipmentBucket); err == nil {
 		h.eqs = sub
 	}
+	if sub, err := c.Subsystem(storage.ATOBucket); err == nil {
+		h.atos = sub
+	}
 	return &h
 }
 
-// a very basic equivalent of errors.Join, but works for go < 1.2
+// a very basic equivalent of errors.Join, but works for go < 1.20
 func BasicErrJoin(prevErr error, newErr error) error {
 	if prevErr != nil {
 		return fmt.Errorf("%w; %v", newErr, prevErr.Error())
-	} else {
-		return newErr
 	}
+	return newErr
 }
 
+// Sub returns the subsystem to use for control actions.
 func (h *Homeostasis) Sub() Subsystem {
-	if h.config.IsMacro {
+	switch h.config.effectiveControlType() {
+	case "macro":
 		return h.macros
+	case "ato":
+		return h.atos
+	default:
+		return h.eqs
 	}
-	return h.eqs
 }
 
 func (h *Homeostasis) EmitMetric(m string, v float64) {
@@ -125,6 +178,7 @@ func (h *Homeostasis) Sync(o *Observation) error {
 		}
 		o.Downer += h.config.Period
 		h.pastTarget = downerTarget
+
 	case (o.Value < h.config.Min) && (h.config.Upper != ""):
 		log.Printf("Current value of '%s' is below minimum threshold. Executing up routine\n", h.config.Name)
 		if err := h.up(); err != nil {
@@ -132,21 +186,38 @@ func (h *Homeostasis) Sync(o *Observation) error {
 		}
 		o.Upper += int(h.config.Period)
 		h.pastTarget = upperTarget
+
 	case h.pastTarget == downerTarget && math.Abs(o.Value-h.config.Max) < h.config.Hysteresis:
 		log.Printf("Current value of '%s' is within max threshold hysteresis, continue executing down routine\n", h.config.Name)
 		if h.pastTarget == downerTarget {
 			o.Downer += int(h.config.Period)
 		}
+
 	case h.pastTarget == upperTarget && math.Abs(o.Value-h.config.Min) < h.config.Hysteresis:
 		log.Printf("Current value of '%s' is within min threshold hysteresis, continue executing up routine\n", h.config.Name)
 		if h.pastTarget == upperTarget {
 			o.Upper += int(h.config.Period)
 		}
+
 	default:
-		log.Printf("Current value of '%s' within range switching off control equipments\n", h.config.Name)
-		h.switchOffAll()
-		h.pastTarget = noTarget
+		// In-range behavior:
+		// - equipment/macro: switch off both (classic reef-pi behavior)
+		// - ato:
+		//     - if ATOInRangeDisable=true  -> switch off both
+		//     - if ATOInRangeDisable=false -> latch (do nothing; keep last selection enabled)
+		if h.config.shouldDisableInRange() {
+			log.Printf("Current value of '%s' within range switching off control targets\n", h.config.Name)
+			_ = h.switchOffAll()
+			h.pastTarget = noTarget
+		} else {
+			log.Printf("Current value of '%s' within range (ato latch enabled): leaving control targets as-is\n", h.config.Name)
+			// Keep pastTarget as-is so hysteresis continuation still makes sense
+			// and we keep the last selected ATO enabled.
+		}
 	}
+
+	// NOTE: these metric keys are historical/quirky in the existing codebase.
+	// Keep as-is to avoid breaking dashboards.
 	if h.config.Upper != "" {
 		h.EmitMetric("down", float64(o.Downer))
 	}
@@ -159,6 +230,7 @@ func (h *Homeostasis) Sync(o *Observation) error {
 func (h *Homeostasis) up() error {
 	var result error
 
+	// When executing "up", we turn OFF the downer and turn ON the upper.
 	if h.config.Downer != "" {
 		if err := h.Sub().On(h.config.Downer, false); err != nil {
 			result = BasicErrJoin(result, err)
@@ -175,6 +247,7 @@ func (h *Homeostasis) up() error {
 func (h *Homeostasis) down() error {
 	var result error
 
+	// When executing "down", we turn OFF the upper and turn ON the downer.
 	if h.config.Upper != "" {
 		if err := h.Sub().On(h.config.Upper, false); err != nil {
 			result = BasicErrJoin(result, err)

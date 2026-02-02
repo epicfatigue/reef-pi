@@ -12,6 +12,7 @@ const PhSchema = Yup.object().shape({
     .min(1, i18n.t('validation:integer_min_required')),
   notify: Yup.bool(),
   one_shot: Yup.bool(),
+  ato_in_range_disable: Yup.bool(),
   analog_input: Yup.string()
     .required(i18n.t('validation:selection_required')),
   transformer: Yup.string(),

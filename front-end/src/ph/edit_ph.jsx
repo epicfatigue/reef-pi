@@ -16,6 +16,7 @@ const EditPh = ({
   analogInputs,
   equipment,
   macros,
+  atos, // NEW
   probe,
   submitForm,
   isValid,
@@ -34,7 +35,7 @@ const EditPh = ({
   }
 
   const analogInputOptions = () => {
-    return analogInputs.map(item => {
+    return (analogInputs || []).map(item => {
       return (
         <option key={item.id} value={item.id}>
           {item.name}
@@ -47,10 +48,17 @@ const EditPh = ({
     values.chart.color = e.target.value
   }
 
+  // Build selectable targets based on control type
   const options = () => {
     let opts = []
 
-    if (values.control === 'equipment') { opts = equipment } else if (values.control === 'macro') { opts = macros }
+    if (values.control === 'equipment') {
+      opts = equipment || []
+    } else if (values.control === 'macro') {
+      opts = macros || []
+    } else if (values.control === 'ato') {
+      opts = atos || []
+    }
 
     return opts.map(item => {
       return (
@@ -60,6 +68,11 @@ const EditPh = ({
       )
     })
   }
+
+  // Labels: reduce confusion for ATO mode
+  const isATO = values.control === 'ato'
+  const upperFunctionLabel = isATO ? 'Raising mechanism' : i18next.t('ph:upper_function')
+  const lowerFunctionLabel = isATO ? 'Lowering mechanism' : i18next.t('ph:lower_function')
 
   const chart = () => {
     if (!values.enable || !probe) {
@@ -115,24 +128,24 @@ const EditPh = ({
             <ErrorFor errors={errors} touched={touched} name='analog_input' />
           </div>
         </div>
-		
-		<div className='col-12 col-sm-6 col-md-3'>
-		  <div className='form-group'>
-			<label htmlFor='temp_sensor_id'>Temp Sensor ID</label>
-			<Field
-			  name='temp_sensor_id'
-			  type='number'
-			  disabled={readOnly}
-			  className={classNames('form-control', {
-				'is-invalid': ShowError('temp_sensor_id', touched, errors)
-			  })}
-			/>
-			<small className='form-text text-muted'>
-			  Set to -1 to disable. Use your Temperature sensor ID (e.g. 2).
-			</small>
-			<ErrorFor errors={errors} touched={touched} name='temp_sensor_id' />
-		  </div>
-		</div>
+
+        <div className='col-12 col-sm-6 col-md-3'>
+          <div className='form-group'>
+            <label htmlFor='temp_sensor_id'>Temp Sensor ID</label>
+            <Field
+              name='temp_sensor_id'
+              type='number'
+              disabled={readOnly}
+              className={classNames('form-control', {
+                'is-invalid': ShowError('temp_sensor_id', touched, errors)
+              })}
+            />
+            <small className='form-text text-muted'>
+              Set to -1 to disable. Use your Temperature sensor ID (e.g. 2).
+            </small>
+            <ErrorFor errors={errors} touched={touched} name='temp_sensor_id' />
+          </div>
+        </div>
 
         <div className='col-12 col-sm-6 col-md-3'>
           <div className='form-group'>
@@ -314,7 +327,7 @@ const EditPh = ({
       </div>
 
       <div className='row'>
-        <div className='col-12 col-sm-6 col-md-3'>
+        <div className='col-12 col-md-3'>
           <div className='form-group'>
             <label htmlFor='control'>{i18next.t('ph:control')}</label>
             <Field
@@ -328,12 +341,38 @@ const EditPh = ({
               <option value=''>{i18next.t('ph:controlnothing')}</option>
               <option value='macro'>{i18next.t('ph:controlmacro')}</option>
               <option value='equipment'>{i18next.t('ph:controlequipment')}</option>
+              <option value='ato'>ATO</option>
             </Field>
             <ErrorFor errors={errors} touched={touched} name='control' />
           </div>
         </div>
 
-        <div className='col col-sm-6 col-md-3'>
+        {/* ATO-only latch toggle: make it span its own “row feel” (wider, not squished) */}
+        <div className={classNames('col-12 col-md-9', { 'd-none': values.control !== 'ato' })}>
+          <div className='form-group'>
+            <label htmlFor='ato_in_range_disable'>ATO: disable when in range</label>
+            <Field
+              name='ato_in_range_disable'
+              component={BooleanSelect}
+              disabled={readOnly || values.control !== 'ato'}
+              className={classNames('custom-select', {
+                'is-invalid': ShowError('ato_in_range_disable', touched, errors)
+              })}
+            >
+              <option value='false'>No (latch / keep last ATO selected)</option>
+              <option value='true'>Yes (disable both when in range)</option>
+            </Field>
+            <small className='form-text text-muted'>
+              If set to “No”, reef-pi will keep whichever ATO was last selected enabled when the reading returns in-range.
+            </small>
+            <ErrorFor errors={errors} touched={touched} name='ato_in_range_disable' />
+          </div>
+        </div>
+      </div>
+
+      {/* THRESHOLDS ROW: keep them aligned/symmetric */}
+      <div className='row'>
+        <div className='col-12 col-md-3 offset-md-3'>
           <div className='form-group'>
             <label htmlFor='upperThreshold'>{i18next.t('ph:upper_threshold')}</label>
             <div className='input-group'>
@@ -351,28 +390,8 @@ const EditPh = ({
             </div>
           </div>
         </div>
-        <div className='col col-sm-6 col-md-3'>
-          <div className='form-group'>
-            <label htmlFor='upperFunction'>{i18next.t('ph:upper_function')}</label>
-            <Field
-              name='upperFunction'
-              component='select'
-              disabled={readOnly || values.control === ''}
-              className={classNames('custom-select', {
-                'is-invalid': ShowError('upperFunction', touched, errors)
-              })}
-            >
-              <option value=''>{i18next.t('ph:controlnothing')}</option>
-              {options()}
-            </Field>
-            <ErrorFor errors={errors} touched={touched} name='upperFunction' />
-          </div>
-        </div>
 
-      </div>
-
-      <div className='row'>
-        <div className='col col-sm-6 col-md-3 offset-md-3'>
+        <div className='col-12 col-md-3'>
           <div className='form-group'>
             <label htmlFor='lowerThreshold'>{i18next.t('ph:lower_threshold')}</label>
             <div className='input-group'>
@@ -390,9 +409,31 @@ const EditPh = ({
             </div>
           </div>
         </div>
-        <div className='col col-sm-6 col-md-3 '>
+      </div>
+
+      {/* MECHANISMS ROW: Raising + Lowering aligned side-by-side (no offsets/weird stagger) */}
+      <div className='row'>
+        <div className='col-12 col-md-3 offset-md-3'>
           <div className='form-group'>
-            <label htmlFor='lowerFunction'>{i18next.t('ph:lower_function')}</label>
+            <label htmlFor='upperFunction'>{upperFunctionLabel}</label>
+            <Field
+              name='upperFunction'
+              component='select'
+              disabled={readOnly || values.control === ''}
+              className={classNames('custom-select', {
+                'is-invalid': ShowError('upperFunction', touched, errors)
+              })}
+            >
+              <option value=''>{i18next.t('ph:controlnothing')}</option>
+              {options()}
+            </Field>
+            <ErrorFor errors={errors} touched={touched} name='upperFunction' />
+          </div>
+        </div>
+
+        <div className='col-12 col-md-3'>
+          <div className='form-group'>
+            <label htmlFor='lowerFunction'>{lowerFunctionLabel}</label>
             <Field
               name='lowerFunction'
               component='select'
@@ -407,8 +448,8 @@ const EditPh = ({
             <ErrorFor errors={errors} touched={touched} name='lowerFunction' />
           </div>
         </div>
-
       </div>
+
 
       <div className='row'>
         <div className='col col-sm-6 col-md-3 offset-md-3'>
@@ -431,6 +472,7 @@ const EditPh = ({
             </div>
           </div>
         </div>
+
         <div className='col col-sm-6 col-md-3'>
           <div className='form-group'>
             <label htmlFor='name'>{i18next.t('ph:transformer')}</label>
@@ -444,7 +486,6 @@ const EditPh = ({
             <ErrorFor errors={errors} touched={touched} name='name' />
           </div>
         </div>
-
       </div>
 
       <div className={classNames('row', { 'd-none': readOnly })}>
@@ -473,6 +514,7 @@ EditPh.propTypes = {
   analogInputs: PropTypes.array,
   equipment: PropTypes.array,
   macros: PropTypes.array,
+  atos: PropTypes.array, // NEW
   probe: PropTypes.object,
   isValid: PropTypes.bool,
   dirty: PropTypes.bool,
