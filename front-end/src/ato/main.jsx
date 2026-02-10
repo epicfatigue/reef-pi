@@ -3,7 +3,7 @@ import New from './new'
 import AtoForm from './ato_form'
 import CollapsibleList from '../ui_components/collapsible_list'
 import Collapsible from '../ui_components/collapsible'
-import { fetchATOs, deleteATO, updateATO, resetATO } from 'redux/actions/ato'
+import { fetchATOs, fetchATOUsage, deleteATO, updateATO, resetATO } from 'redux/actions/ato'
 import { connect } from 'react-redux'
 import { fetchEquipment } from 'redux/actions/equipment'
 import { fetchInlets } from 'redux/actions/inlets'
@@ -21,12 +21,33 @@ class main extends React.Component {
     this.handleSubmit = this.handleSubmit.bind(this)
     this.handleDelete = this.handleDelete.bind(this)
     this.handleReset = this.handleReset.bind(this)
+    this.fetchAllUsage = this.fetchAllUsage.bind(this)
   }
 
   componentDidMount () {
     this.props.fetchATOs()
     this.props.fetchEquipment()
     this.props.fetchInlets()
+
+    // If ATOS are already in state for some reason, preload usage
+    this.fetchAllUsage(this.props.atos)
+  }
+
+  componentDidUpdate (prevProps) {
+    // When ATOs are loaded/changed, preload usage so graphs render immediately
+    const prevIds = (prevProps.atos || []).map(a => a.id).sort().join(',')
+    const nextIds = (this.props.atos || []).map(a => a.id).sort().join(',')
+    if (prevIds !== nextIds) {
+      this.fetchAllUsage(this.props.atos)
+    }
+  }
+
+  fetchAllUsage (atos) {
+    ;(atos || []).forEach(a => {
+      if (a && typeof a.id !== 'undefined') {
+        this.props.fetchATOUsage(a.id)
+      }
+    })
   }
 
   handleSubmit (values) {
@@ -58,7 +79,9 @@ class main extends React.Component {
     )
     confirm(i18n.t('ato:reset_usage'), { description: message }).then(
       function () {
+        // resetATO (per your earlier patch) clears usage + refetches usage,
         this.props.reset(probe.id)
+        this.props.fetchATOUsage(probe.id)
       }.bind(this)
     )
   }
@@ -79,12 +102,14 @@ class main extends React.Component {
   }
 
   probeList () {
-    return this.props.atos.sort((a, b) => SortByName(a, b))
+    return (this.props.atos || []).sort((a, b) => SortByName(a, b))
       .map(probe => {
         const handleToggleState = () => {
-          probe.enable = !probe.enable
-          this.props.update(probe.id, probe)
+          // Don't mutate props directly
+          const updated = { ...probe, enable: !probe.enable }
+          this.props.update(probe.id, updated)
         }
+
         const resetButton = (
           <button
             type='button'
@@ -113,7 +138,6 @@ class main extends React.Component {
               equipment={this.props.equipment}
               macros={this.props.macros}
             />
-
           </Collapsible>
         )
       })
@@ -147,6 +171,7 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
   return {
     fetchATOs: () => dispatch(fetchATOs()),
+    fetchATOUsage: (id) => dispatch(fetchATOUsage(id)),
     fetchEquipment: () => dispatch(fetchEquipment()),
     fetchInlets: () => dispatch(fetchInlets()),
     delete: id => dispatch(deleteATO(id)),

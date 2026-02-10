@@ -2,7 +2,7 @@ package ato
 
 import (
 	"net/http"
-
+	"strings"
 	"github.com/gorilla/mux"
 
 	"github.com/reef-pi/reef-pi/controller/utils"
@@ -174,6 +174,27 @@ func (c *Controller) delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) getUsage(w http.ResponseWriter, req *http.Request) {
-	fn := func(id string) (interface{}, error) { return c.statsMgr.Get(id) }
-	utils.JSONGetResponse(fn, w, req)
+	id := mux.Vars(req)["id"]
+
+	usage, err := c.statsMgr.Get(id)
+	if err != nil {
+		// If stats do not exist yet, return an empty usage object instead of an error.
+		// This prevents the frontend graph from breaking before the first ATO trigger.
+		if strings.Contains(err.Error(), "not found") {
+			empty := map[string]interface{}{
+				"current": []interface{}{},
+			}
+			utils.JSONResponse(empty, w, req)
+			return
+		}
+
+		// Any other error is unexpected: return a real error response.
+		utils.ErrorResponse(http.StatusInternalServerError, err.Error(), w)
+		return
+	}
+
+	// Normal successful usage response
+	utils.JSONResponse(usage, w, req)
 }
+
+
