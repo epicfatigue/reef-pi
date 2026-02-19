@@ -37,39 +37,62 @@ const EditDriver = ({
     handleChange(e)
   }
 
-  const driverConfig = () => {
-    const selectedType = driverOptions[values.type]
-    if (selectedType == null) { return null }
-    const params = []
+	const driverConfig = () => {
+	  const selectedType = driverOptions[values.type]
+	  if (selectedType == null) { return null }
 
-    selectedType.sort((a, b) => { return parseInt(a.order) > parseInt(b.order) })
-      .forEach((item) => {
-        const param = (
-          <div key={item.name} className='col col-sm-6 col-md-3'>
-            <div className='form-group'>
-              <label htmlFor={'config.' + item.name.toLowerCase()}>{item.name}</label>
-              <Field
-                name={'config.' + item.name.toLowerCase()}
-                disabled={readOnly}
-                type={item.type === 4 ? 'checkbox' : 'text'}
-                placeholder={item.default.toString()}
-                className={classNames('form-control', {
-                  'is-invalid': ShowError('config.' + item.name.toLowerCase(), touched, errors)
-                })}
-              />
-              <ErrorFor errors={errors} touched={touched} name={'config.' + item.name.toLowerCase()} />
-            </div>
-          </div>
-        )
-        params.push(param)
-      })
+	  const params = []
 
-    return (
-      <div className={classNames('row', { 'd-none': readOnly })}>
-        {params}
-      </div>
-    )
-  }
+	  selectedType
+		.slice() // avoid mutating original
+		.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
+		.forEach((item) => {
+		  const param = (
+			<div key={item.name} className='col col-sm-6 col-md-3'>
+			  <div className='form-group'>
+				<label htmlFor={'config.' + item.name.toLowerCase()}>
+				  {item.name}
+				</label>
+
+				<Field
+				  name={'config.' + item.name.toLowerCase()}
+				  disabled={readOnly}
+				  type={item.type === 4 ? 'checkbox' : 'text'}
+				  placeholder={item.default != null ? String(item.default) : ''}
+				  className={classNames('form-control', {
+					'is-invalid': ShowError(
+					  'config.' + item.name.toLowerCase(),
+					  touched,
+					  errors
+					)
+				  })}
+				/>
+
+				{item.description && (
+				  <small className="form-text text-muted">
+					{item.description}
+				  </small>
+				)}
+
+				<ErrorFor
+				  errors={errors}
+				  touched={touched}
+				  name={'config.' + item.name.toLowerCase()}
+				/>
+			  </div>
+			</div>
+		  )
+
+		  params.push(param)
+		})
+
+	  return (
+		<div className={classNames('row', { 'd-none': readOnly })}>
+		  {params}
+		</div>
+	  )
+	}
+
 
   const typeOptions = () => {
     return Object.keys(driverOptions).map(item => {
