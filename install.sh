@@ -240,7 +240,8 @@ build_backend_and_install() {
     make install
 
     if [[ '${BUILD_UI}' == 'true' ]]; then
-      echo '[reef-pi] yarn build'
+      echo '[reef-pi] yarn build (Node heap: 1024MB)'
+      export NODE_OPTIONS='--max-old-space-size=1024'
       yarn build
     else
       echo '[reef-pi] BUILD_UI=false; skipping yarn build'
