@@ -119,6 +119,20 @@ create_user_and_dirs() {
   chmod 775 "${DATA_DIR}" "${LOG_DIR}"
 }
 
+prepare_opt_repos() {
+  log "Preparing repo directories under ${BASE_DIR}..."
+  mkdir -p "${BASE_DIR}/reef-pi" "${BASE_DIR}/drivers" "${BASE_DIR}/hal" "${BASE_DIR}/rpi"
+  chown -R "${APP_USER}:${APP_GROUP}" "${BASE_DIR}/reef-pi" "${BASE_DIR}/drivers" "${BASE_DIR}/hal" "${BASE_DIR}/rpi"
+
+  # Make sure base dir itself is accessible (normally already is)
+  chmod 755 "${BASE_DIR}" || true
+
+  # Sanity check: can the service user write to these paths?
+  if ! sudo -u "${APP_USER}" test -w "${BASE_DIR}/drivers"; then
+    die "${BASE_DIR}/drivers is not writable by ${APP_USER}. Check permissions on ${BASE_DIR}."
+  fi
+}
+
 write_sudoers_rules() {
   log "Installing sudoers rules for ${APP_USER} (passwordless systemctl restart)..."
 
@@ -161,7 +175,9 @@ clone_or_update_repo() {
     sudo -u "${APP_USER}" git -C "${dest}" pull --ff-only
   else
     log "Cloning ${url} -> ${dest}..."
-    rm -rf "${dest}"
+    mkdir -p "${dest}"
+    chown -R "${APP_USER}:${APP_GROUP}" "${dest}"
+    # Clone directly into destination
     sudo -u "${APP_USER}" git clone --branch "${branch}" "${url}" "${dest}"
   fi
 }
@@ -358,6 +374,7 @@ log "ALLOW_POWER=${ALLOW_POWER}"
 
 install_packages
 create_user_and_dirs
+prepare_opt_repos
 write_sudoers_rules
 clone_all
 wire_local_replaces
