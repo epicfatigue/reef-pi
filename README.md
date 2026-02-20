@@ -55,3 +55,36 @@ Donations go toward:
 Support is completely optional. This project will always remain open source.
 
 Please also consider supporting the original reef-pi maintainers who made this ecosystem possible.
+
+
+## Installation Summary
+
+The installer is designed for a fresh Raspberry Pi OS (Debian Trixie) system and performs a complete automated setup of this reef-pi fork.
+
+When executed, the script will:
+
+Update the operating system
+
+Install all required dependencies (Go, Node.js, yarn, git, build tools)
+
+Create a dedicated reefpi system user (reserved for the service — do not create this account manually)
+
+Create required directories under /opt and /var/lib
+
+Clone all required repositories (reef-pi, drivers, hal, rpi) into /opt
+
+Wire local Go module replacements so sibling repositories are used
+
+Build the frontend (if enabled)
+
+Build and install the backend binary
+
+Create and enable a systemd service
+
+Start reef-pi automatically on boot
+
+The result is a fully compiled, service-managed installation running under a restricted system account.
+
+Install with:
+
+curl -fsSL https://raw.githubusercontent.com/epicfatigue/reef-pi/main/install.sh | sudo bash
