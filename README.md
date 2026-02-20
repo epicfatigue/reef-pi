@@ -1,90 +1,115 @@
 # reef-pi
 
-[![Support](https://img.shields.io/badge/Support-PayPal-blue?logo=paypal)](https://paypal.me/miwoodrow)
+<p align="center">
+  <b>Advanced Reef Aquarium Controller for Raspberry Pi</b><br>
+  Instrumentation-Focused Fork with Enhanced Driver & Platform Support
+</p>
 
-An open source reef tank controller based on Raspberry Pi
+<p align="center">
+  <a href="https://paypal.me/miwoodrow">
+    <img src="https://img.shields.io/badge/Support-PayPal-blue?logo=paypal" />
+  </a>
+</p>
 
-⚠️ This is a personal fork of the original reef-pi project. For official releases and stable builds, please see the original repository: https://github.com/reef-pi/reef-pi
+<p align="center">
+  <img src="https://img.shields.io/github/release/reef-pi/reef-pi.svg" />
+  <img src="https://github.com/reef-pi/reef-pi/workflows/go/badge.svg?branch=main" />
+  <img src="https://github.com/reef-pi/reef-pi/workflows/jest/badge.svg?branch=main" />
+  <img src="https://github.com/reef-pi/reef-pi/workflows/smoke/badge.svg?branch=main" />
+  <img src="https://github.com/reef-pi/reef-pi/workflows/deb/badge.svg?branch=main" />
+</p>
 
-[![GitHub release](https://img.shields.io/github/release/reef-pi/reef-pi.svg)](https://github.com/reef-pi/reef-pi/releases)
-![Build Status(backend)](https://github.com/reef-pi/reef-pi/workflows/go/badge.svg?branch=main)
-![Build Status(frontend)](https://github.com/reef-pi/reef-pi/workflows/jest/badge.svg?branch=main)
-![Build Status(smoke)](https://github.com/reef-pi/reef-pi/workflows/smoke/badge.svg?branch=main)
-![Build Status(package)](https://github.com/reef-pi/reef-pi/workflows/deb/badge.svg?branch=main)
-
-[![Coverage Status](https://codecov.io/gh/reef-pi/reef-pi/branch/main/graph/badge.svg)](https://codecov.io/gh/reef-pi/reef-pi)
-[![Go Report Card](https://goreportcard.com/badge/reef-pi/reef-pi)](https://goreportcard.com/report/reef-pi/reef-pi)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/reef-pi/reef-pi/blob/main/LICENSE.txt)
-[![GoDoc](https://godoc.org/github.com/reef-pi/reef-pi?status.svg)](https://godoc.org/github.com/reef-pi/reef-pi)
-
-## Introduction
-
-[reef-pi](http://reef-pi.com) is an opensource [reef tank](https://en.wikipedia.org/wiki/Reef_aquarium) controller based on [Raspberry Pi](https://www.raspberrypi.org/). This repository contains a personal fork of reef-pi with additional instrumentation, driver enhancements, and platform refinements.
-
-If you are trying to build a physical controller to automate your reef tank, use the official reef-pi [website](http://reef-pi.com). If you are new to reef keeping and want to know about the hobby, use one of the online forums such as [reef2reef](https://www.reef2reef.com/) or [nano-reef](https://www.nano-reef.com/).
+<p align="center">
+  <img src="https://codecov.io/gh/reef-pi/reef-pi/branch/main/graph/badge.svg" />
+  <img src="https://goreportcard.com/badge/reef-pi/reef-pi" />
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" />
+  <img src="https://godoc.org/github.com/reef-pi/reef-pi?status.svg" />
+</p>
 
 ---
 
-## This Fork
+> ⚠️ **This is a personal fork of the original reef-pi project.**  
+> For official releases and stable builds, please visit:  
+> 👉 https://github.com/reef-pi/reef-pi
 
-This repository builds upon the original reef-pi project and extends it with:
+---
 
-- Enhanced conductivity and salinity driver support  
+## Overview
+
+[reef-pi](http://reef-pi.com) is an open-source reef aquarium controller built for the Raspberry Pi.
+
+This fork extends the original architecture with enhanced instrumentation, expanded driver capability, and refined platform support — focused on precision monitoring, salinity modeling, and hardware abstraction improvements.
+
+It is designed for reef keepers who want deeper visibility, tighter calibration control, and expanded Raspberry Pi compatibility.
+
+---
+
+## Key Enhancements in This Fork
+
+This repository builds upon the original reef-pi foundation and introduces:
+
+- Advanced conductivity and salinity driver support  
 - Improved temperature compensation modeling  
 - Hardware abstraction refinements  
 - Expanded Raspberry Pi platform compatibility  
-- Experimental instrumentation and calibration tooling  
+- Experimental calibration and instrumentation tooling  
+- Enhanced diagnostics and validation workflows  
 
-All credit for the original architecture, vision, and foundation belongs to the reef-pi maintainers and contributors.
+All credit for the original architecture, design, and ecosystem belongs to the reef-pi maintainers and contributors.
+
+---
+
+## Installation
+
+### Quick Install (Raspberry Pi OS – Debian Trixie)
+
+On a fresh Raspberry Pi OS system, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/epicfatigue/reef-pi/main/install.sh | sudo bash
+```
+
+---
+
+### What the Installer Does
+
+The automated installer performs a complete setup:
+
+- Updates the operating system  
+- Installs all required dependencies (Go, Node.js, yarn, git, build tools)  
+- Creates a dedicated **`reefpi` system user**  
+  - ⚠️ Reserved for the service — do **not** create or modify manually  
+- Creates required directories under `/opt` and `/var/lib`  
+- Clones all required repositories (`reef-pi`, `drivers`, `hal`, `rpi`)  
+- Wires local Go module replacements for sibling repositories  
+- Builds the frontend (if enabled)  
+- Compiles and installs the backend binary  
+- Creates and enables a `systemd` service  
+- Starts reef-pi automatically on boot  
+
+The result is a fully compiled, service-managed installation running under a restricted system account.
+
+After installation, access reef-pi at:
+
+```
+http://<your-pi-ip>:8080
+```
 
 ---
 
 ## Supporting Development
 
-If this fork helps your reef system and you would like to support ongoing development, hardware testing, and driver validation, you can do so here:
+If this fork helps your reef system and you would like to support continued hardware testing, driver development, and long-term validation:
 
-👉 https://paypal.me/miwoodrow
+👉 **https://paypal.me/miwoodrow**
 
-Donations go toward:
+Donations contribute toward:
 
-- Purchasing hardware for driver development  
-- Testing probes and instrumentation  
-- Supporting multiple Raspberry Pi platforms  
-- Long-term calibration and validation experiments  
+- Hardware acquisition for driver testing  
+- Probe validation and calibration research  
+- Multi-platform Raspberry Pi compatibility  
+- Long-term stability and drift analysis  
 
-Support is completely optional. This project will always remain open source.
+Support is optional. This project will always remain open source.
 
 Please also consider supporting the original reef-pi maintainers who made this ecosystem possible.
-
-
-## Installation Summary
-
-The installer is designed for a fresh Raspberry Pi OS (Debian Trixie) system and performs a complete automated setup of this reef-pi fork.
-
-When executed, the script will:
-
-Update the operating system
-
-Install all required dependencies (Go, Node.js, yarn, git, build tools)
-
-Create a dedicated reefpi system user (reserved for the service — do not create this account manually)
-
-Create required directories under /opt and /var/lib
-
-Clone all required repositories (reef-pi, drivers, hal, rpi) into /opt
-
-Wire local Go module replacements so sibling repositories are used
-
-Build the frontend (if enabled)
-
-Build and install the backend binary
-
-Create and enable a systemd service
-
-Start reef-pi automatically on boot
-
-The result is a fully compiled, service-managed installation running under a restricted system account.
-
-Install with:
-
-curl -fsSL https://raw.githubusercontent.com/epicfatigue/reef-pi/main/install.sh | sudo bash
