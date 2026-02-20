@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "[reef-pi] ERROR on line $LINENO: $BASH_COMMAND" >&2' ERR
 
 log() { echo -e "\n[reef-pi] $*\n"; }
 die() { echo "[reef-pi] ERROR: $*" >&2; exit 1; }
 
 require_root() {
   if [[ "${EUID}" -ne 0 ]]; then
-    die "Please run as root (use: sudo bash install.sh)"
+    die "Please run as root (use: curl -fsSL <url> | sudo bash)"
   fi
 }
 
@@ -177,7 +178,6 @@ clone_or_update_repo() {
     log "Cloning ${url} -> ${dest}..."
     mkdir -p "${dest}"
     chown -R "${APP_USER}:${APP_GROUP}" "${dest}"
-    # Clone directly into destination
     sudo -u "${APP_USER}" git clone --branch "${branch}" "${url}" "${dest}"
   fi
 }
@@ -189,7 +189,6 @@ clone_all() {
   clone_or_update_repo "${REPO_RPI}"     "${BASE_DIR}/rpi"     "${BRANCH}"
   clone_or_update_repo "${REPO_REEFPI}"  "${BASE_DIR}/reef-pi" "${BRANCH}"
 
-  # Ensure ownership (in case /opt existed with different perms)
   chown -R "${APP_USER}:${APP_GROUP}" "${BASE_DIR}/drivers" "${BASE_DIR}/hal" "${BASE_DIR}/rpi" "${BASE_DIR}/reef-pi"
 }
 
@@ -219,58 +218,42 @@ wire_local_replaces() {
   "
 }
 
-build_ui_if_present() {
-  local rp="${BASE_DIR}/reef-pi"
-
-  if [[ "${BUILD_UI}" != "true" ]]; then
-    log "BUILD_UI is false; skipping UI build."
-    return 0
-  fi
-
-  local ui_dir=""
-  if [[ -f "${rp}/ui/package.json" ]]; then ui_dir="${rp}/ui"; fi
-  if [[ -z "${ui_dir}" && -f "${rp}/frontend/package.json" ]]; then ui_dir="${rp}/frontend"; fi
-  if [[ -z "${ui_dir}" && -f "${rp}/front-end/package.json" ]]; then ui_dir="${rp}/front-end"; fi
-
-  if [[ -z "${ui_dir}" ]]; then
-    log "No UI directory with package.json found; skipping UI build."
-    return 0
-  fi
-
-  log "Building UI in ${ui_dir} using yarn..."
-  sudo -u "${APP_USER}" bash -lc "
-    set -e
-    cd '${ui_dir}'
-    yarn install --frozen-lockfile || yarn install
-    yarn build
-  "
-}
-
 build_backend_and_install() {
   local rp="${BASE_DIR}/reef-pi"
 
-  log "Building reef-pi backend..."
-  if [[ -f "${rp}/Makefile" ]]; then
-    if grep -qE '(^|\s)build(\s|:|$)' "${rp}/Makefile"; then
-      sudo -u "${APP_USER}" make -C "${rp}" build
-    else
-      sudo -u "${APP_USER}" bash -lc "cd '${rp}' && go build -o '${APP_NAME}' ./"
-    fi
-  else
-    sudo -u "${APP_USER}" bash -lc "cd '${rp}' && go build -o '${APP_NAME}' ./"
-  fi
+  log "Running full reef-pi build sequence..."
 
-  local bin_src=""
-  if [[ -f "${rp}/${APP_NAME}" ]]; then
-    bin_src="${rp}/${APP_NAME}"
-  elif [[ -f "${rp}/bin/${APP_NAME}" ]]; then
-    bin_src="${rp}/bin/${APP_NAME}"
-  else
-    die "Build finished but ${APP_NAME} binary not found in ${rp} or ${rp}/bin"
-  fi
+  sudo -u "${APP_USER}" bash -lc "
+    set -e
+    cd '${rp}'
+
+    echo '[reef-pi] make clean'
+    make clean || true
+
+    echo '[reef-pi] go clean -cache -testcache -modcache'
+    go clean -cache -testcache -modcache
+
+    echo '[reef-pi] go mod tidy'
+    go mod tidy
+
+    echo '[reef-pi] make install'
+    make install
+
+    if [[ '${BUILD_UI}' == 'true' ]]; then
+      echo '[reef-pi] yarn build'
+      yarn build
+    else
+      echo '[reef-pi] BUILD_UI=false; skipping yarn build'
+    fi
+
+    echo '[reef-pi] go build -o reef-pi ./commands'
+    go build -o reef-pi ./commands
+  "
+
+  [[ -f "${rp}/reef-pi" ]] || die "reef-pi binary not found after build."
 
   log "Installing binary to /usr/local/bin/${APP_NAME}..."
-  install -m 0755 "${bin_src}" "/usr/local/bin/${APP_NAME}"
+  install -m 0755 "${rp}/reef-pi" "/usr/local/bin/${APP_NAME}"
   chown root:root "/usr/local/bin/${APP_NAME}"
 }
 
@@ -378,7 +361,6 @@ prepare_opt_repos
 write_sudoers_rules
 clone_all
 wire_local_replaces
-build_ui_if_present
 build_backend_and_install
 write_service_file
 enable_and_start
