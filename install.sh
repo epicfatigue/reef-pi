@@ -223,29 +223,29 @@ build_backend_and_install() {
 
   log "Running full reef-pi build sequence..."
 
-  # --- Detect RAM (MiB) and choose safe defaults for low-memory Pis (Pi 2/3) ---
-  local mem_total_kb mem_total_mb node_heap_mb effective_build_ui
+  # Detect RAM (MiB)
+  local mem_total_kb mem_total_mb node_heap_mb swap_target_mb
   mem_total_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
   mem_total_mb="$(( mem_total_kb / 1024 ))"
 
-  # Default to whatever the user set (BUILD_UI), but override on low RAM.
-  effective_build_ui="${BUILD_UI}"
+  # Defaults
+  node_heap_mb="1024"
+  swap_target_mb="0"
 
-  # Heuristics:
-  # - <= 1200 MiB (Pi 2 B / many Pi 3): do NOT attempt yarn build (it will OOM). Use prebuilt UI or BUILD_UI=false.
-  # - 1201..2000 MiB: attempt yarn build with smaller heap (512)
-  # - > 2000 MiB: heap 1024
+  # Heuristics for small Pis
+  # Pi 2 B is ~948 MiB usable; it benefits from big swap + smaller node heap.
   if (( mem_total_mb <= 1200 )); then
-    effective_build_ui="false"
     node_heap_mb="512"
-    log "Detected low memory (${mem_total_mb} MiB). Disabling UI build to avoid OOM (Pi 2/3 class)."
-    log "Tip: build UI on another machine / CI, or run installer with BUILD_UI=false (defaulted here)."
+    swap_target_mb="4096"   # aggressive but most reliable for UI builds on 1GB
+    log "Low memory detected (${mem_total_mb} MiB). Will increase swap to ${swap_target_mb}MB and limit Node heap to ${node_heap_mb}MB."
+    ensure_swap "${swap_target_mb}"
   elif (( mem_total_mb <= 2000 )); then
-    node_heap_mb="512"
-    log "Detected ${mem_total_mb} MiB RAM. Using smaller Node heap: ${node_heap_mb}MB for yarn build."
+    node_heap_mb="768"
+    swap_target_mb="2048"
+    log "Moderate memory detected (${mem_total_mb} MiB). Will increase swap to ${swap_target_mb}MB and set Node heap to ${node_heap_mb}MB."
+    ensure_swap "${swap_target_mb}"
   else
-    node_heap_mb="1024"
-    log "Detected ${mem_total_mb} MiB RAM. Using Node heap: ${node_heap_mb}MB for yarn build."
+    log "Memory detected (${mem_total_mb} MiB). Using Node heap ${node_heap_mb}MB."
   fi
 
   sudo -u "${APP_USER}" bash -lc "
@@ -264,12 +264,12 @@ build_backend_and_install() {
     echo '[reef-pi] make install'
     make install
 
-    if [[ '${effective_build_ui}' == 'true' ]]; then
+    if [[ '${BUILD_UI}' == 'true' ]]; then
       echo '[reef-pi] yarn build (Node heap: ${node_heap_mb}MB)'
       export NODE_OPTIONS='--max-old-space-size=${node_heap_mb}'
       yarn build
     else
-      echo '[reef-pi] BUILD_UI disabled by installer (low memory) or user; skipping yarn build'
+      echo '[reef-pi] BUILD_UI=false; skipping yarn build'
     fi
 
     echo '[reef-pi] go build -o reef-pi ./commands'
