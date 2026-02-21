@@ -283,6 +283,37 @@ build_backend_and_install() {
   chown root:root "/usr/local/bin/${APP_NAME}"
 }
 
+
+ensure_swap() {
+  local target_mb="${1:-2048}"
+
+  log "Ensuring swap is at least ${target_mb}MB..."
+
+  if ! dpkg -s dphys-swapfile >/dev/null 2>&1; then
+    log "Installing dphys-swapfile..."
+    apt-get install -y dphys-swapfile || die "Failed to install dphys-swapfile"
+  fi
+
+  local cfg="/etc/dphys-swapfile"
+  local current_mb
+  current_mb="$(awk -F= '/^CONF_SWAPSIZE=/{print $2}' "${cfg}" 2>/dev/null || echo 0)"
+
+  if [[ "${current_mb}" =~ ^[0-9]+$ ]] && (( current_mb >= target_mb )); then
+    log "Swap already ${current_mb}MB"
+  else
+    log "Setting swap to ${target_mb}MB"
+    if grep -q '^CONF_SWAPSIZE=' "${cfg}"; then
+      sed -i "s/^CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${target_mb}/" "${cfg}"
+    else
+      echo "CONF_SWAPSIZE=${target_mb}" >> "${cfg}"
+    fi
+  fi
+
+  systemctl restart dphys-swapfile
+  free -h
+}
+
+
 write_service_file() {
   log "Creating systemd service: ${SERVICE_NAME}.service"
 
@@ -387,6 +418,7 @@ prepare_opt_repos
 write_sudoers_rules
 clone_all
 wire_local_replaces
+ensure_swap
 build_backend_and_install
 write_service_file
 enable_and_start
