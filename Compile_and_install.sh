@@ -233,10 +233,9 @@ build_backend_and_install() {
   swap_target_mb="0"
 
   # Heuristics for small Pis
-  # Pi 2 B is ~948 MiB usable; it benefits from big swap + smaller node heap.
   if (( mem_total_mb <= 1200 )); then
     node_heap_mb="512"
-    swap_target_mb="4096"   # aggressive but most reliable for UI builds on 1GB
+    swap_target_mb="4096"
     log "Low memory detected (${mem_total_mb} MiB). Will increase swap to ${swap_target_mb}MB and limit Node heap to ${node_heap_mb}MB."
     ensure_swap "${swap_target_mb}"
   elif (( mem_total_mb <= 2000 )); then
@@ -269,25 +268,28 @@ build_backend_and_install() {
       export NODE_OPTIONS='--max-old-space-size=${node_heap_mb}'
       yarn build
 
-      echo '[reef-pi] Installing UI assets into ${DATA_DIR} (so systemd WorkingDirectory can serve them)'
-      UI_SRC=''
-      if [[ -d 'front-end/build' ]]; then UI_SRC='front-end/build'; fi
-      if [[ -d 'ui/build' ]]; then UI_SRC='ui/build'; fi
+      echo '[reef-pi] Detecting UI build output...'
+      UI_INDEX_PATH=\$(find . -maxdepth 7 -type f -name index.html \
+        \\( -path '*/build/*' -o -path '*/dist/*' \\) 2>/dev/null | head -n 1 || true)
 
-      if [[ -z \"\$UI_SRC\" ]]; then
-        echo '[reef-pi] ERROR: UI build output not found (expected front-end/build or ui/build)'
+      if [[ -z \"\$UI_INDEX_PATH\" ]]; then
+        echo '[reef-pi] ERROR: UI build output not found after yarn build.'
+        echo '[reef-pi] Looked for index.html under */build/* or */dist/* (maxdepth 7).'
+        echo '[reef-pi] Debug: listing likely frontend dirs:'
+        ls -la | sed -n '1,200p' || true
+        find . -maxdepth 3 -name package.json -print || true
         exit 1
       fi
 
-      # Copy UI build output into DATA_DIR
-      mkdir -p '${DATA_DIR}'
-      rsync -a --delete \"\$UI_SRC/\" '${DATA_DIR}/'
+      UI_SRC=\$(dirname \"\$UI_INDEX_PATH\")
+      echo \"[reef-pi] UI output detected at: \$UI_SRC\"
 
-      # Ensure runtime user owns the UI assets (and data dir)
-      chown -R '${APP_USER}:${APP_GROUP}' '${DATA_DIR}'
+      echo '[reef-pi] Installing UI assets into ${DATA_DIR} (so systemd WorkingDirectory can serve them)'
+      sudo mkdir -p '${DATA_DIR}'
+      sudo rsync -a --delete \"\$UI_SRC/\" '${DATA_DIR}/'
+      sudo chown -R '${APP_USER}:${APP_GROUP}' '${DATA_DIR}'
     else
       echo '[reef-pi] BUILD_UI=false; skipping yarn build'
-      # If reef-pi serves UI from WorkingDirectory, require assets already present
       if [[ ! -f '${DATA_DIR}/index.html' ]]; then
         echo '[reef-pi] ERROR: BUILD_UI=false but no UI assets found in ${DATA_DIR} (missing index.html)'
         exit 1
