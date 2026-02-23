@@ -267,33 +267,8 @@ build_backend_and_install() {
       echo '[reef-pi] yarn build (Node heap: ${node_heap_mb}MB)'
       export NODE_OPTIONS='--max-old-space-size=${node_heap_mb}'
       yarn build
-
-      echo '[reef-pi] Detecting UI build output...'
-      UI_INDEX_PATH=\$(find . -maxdepth 7 -type f -name index.html \
-        \\( -path '*/build/*' -o -path '*/dist/*' \\) 2>/dev/null | head -n 1 || true)
-
-      if [[ -z \"\$UI_INDEX_PATH\" ]]; then
-        echo '[reef-pi] ERROR: UI build output not found after yarn build.'
-        echo '[reef-pi] Looked for index.html under */build/* or */dist/* (maxdepth 7).'
-        echo '[reef-pi] Debug: listing likely frontend dirs:'
-        ls -la | sed -n '1,200p' || true
-        find . -maxdepth 3 -name package.json -print || true
-        exit 1
-      fi
-
-      UI_SRC=\$(dirname \"\$UI_INDEX_PATH\")
-      echo \"[reef-pi] UI output detected at: \$UI_SRC\"
-
-      echo '[reef-pi] Installing UI assets into ${DATA_DIR} (so systemd WorkingDirectory can serve them)'
-      sudo mkdir -p '${DATA_DIR}'
-      sudo rsync -a --delete \"\$UI_SRC/\" '${DATA_DIR}/'
-      sudo chown -R '${APP_USER}:${APP_GROUP}' '${DATA_DIR}'
     else
       echo '[reef-pi] BUILD_UI=false; skipping yarn build'
-      if [[ ! -f '${DATA_DIR}/index.html' ]]; then
-        echo '[reef-pi] ERROR: BUILD_UI=false but no UI assets found in ${DATA_DIR} (missing index.html)'
-        exit 1
-      fi
     fi
 
     echo '[reef-pi] go build -o reef-pi ./commands'
@@ -301,6 +276,22 @@ build_backend_and_install() {
   "
 
   [[ -f "${rp}/reef-pi" ]] || die "reef-pi binary not found after build."
+
+  # --- NEW: sync runtime assets (UI + anything else reef-pi expects) into DATA_DIR ---
+  log "Syncing ${rp}/ -> ${DATA_DIR}/ (excluding reef-pi.db and git metadata)..."
+  mkdir -p "${DATA_DIR}"
+
+  rsync -a --delete \
+    --exclude='.git/' \
+    --exclude='.github/' \
+    --exclude='node_modules/' \
+    --exclude='reef-pi.db' \
+    --exclude='*.log' \
+    "${rp}/" \
+    "${DATA_DIR}/"
+
+  chown -R "${APP_USER}:${APP_GROUP}" "${DATA_DIR}"
+  # -------------------------------------------------------------------------------
 
   log "Installing binary to /usr/local/bin/${APP_NAME}..."
   install -m 0755 "${rp}/reef-pi" "/usr/local/bin/${APP_NAME}"
