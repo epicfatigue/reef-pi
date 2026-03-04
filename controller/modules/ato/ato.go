@@ -218,3 +218,39 @@ func (a ATO) CreateFeed(t telemetry.Telemetry) {
 		t.CreateFeedIfNotExist("ato-" + a.Name + "-usage")
 	}
 }
+
+func (c *Controller) CanEnable(id string) (bool, string) {
+	a, err := c.Get(id)
+	if err != nil {
+		return false, "ATO not found"
+	}
+
+	// If notify limits are not enabled, don't block here.
+	if !a.Notify.Enable {
+		return true, ""
+	}
+
+	// Use the same usage stats that NotifyIfNeeded uses.
+	resp, err := c.statsMgr.Get(a.ID)
+	if err != nil {
+		// Fail-open: don't block due to stats read problems.
+		return true, ""
+	}
+	if len(resp.Historical) < 1 {
+		return true, ""
+	}
+
+	m := resp.Historical[len(resp.Historical)-1]
+	u, ok := m.(Usage)
+	if !ok {
+		// Fail-open: unknown metric type
+		return true, ""
+	}
+
+	// Block if we've reached/exceeded the configured max.
+	if u.Pump >= a.Notify.Max {
+		return false, fmt.Sprintf("usage limit reached (%d >= %d)", u.Pump, a.Notify.Max)
+	}
+
+	return true, ""
+}

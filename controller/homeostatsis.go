@@ -4,9 +4,8 @@ package controller
 import (
 	"fmt"
 	"log"
-	"math"
 	"time"
-
+	"math"
 	"github.com/reef-pi/reef-pi/controller/storage"
 	"github.com/reef-pi/reef-pi/controller/telemetry"
 	"github.com/reef-pi/reef-pi/controller/utils"
@@ -91,6 +90,25 @@ type HomeoStasisConfig struct {
 	ATOLowerID        int
 	ATOInRangeDisable bool
 }
+
+type EnableGuard interface {
+	CanEnable(id string) (bool, string) // (allowed, reason)
+}
+
+
+func (h *Homeostasis) canEnable(id string) (bool, string) {
+	if h.config.effectiveControlType() != "ato" {
+		return true, ""
+	}
+	sub := h.Sub()
+	g, ok := interface{}(sub).(EnableGuard)
+	if !ok || g == nil {
+		return true, ""
+	}
+	return g.CanEnable(id)
+}
+
+
 
 // effectiveControlType resolves which control target type to use, keeping old configs working.
 func (c HomeoStasisConfig) effectiveControlType() string {
@@ -230,34 +248,65 @@ func (h *Homeostasis) Sync(o *Observation) error {
 func (h *Homeostasis) up() error {
 	var result error
 
-	// When executing "up", we turn OFF the downer and turn ON the upper.
+	// Check first: can we enable the upper target?
+	if h.config.Upper != "" {
+		ok, reason := h.canEnable(h.config.Upper)
+		if !ok {
+			if reason == "" {
+				reason = "ATO limit reached"
+			}
+			log.Printf("Homeostasis: blocked enabling up target '%s' for '%s': %s\n",
+				h.config.Upper, h.config.Name, reason)
+			return result
+		}
+	}
+
+	// Now perform switching
 	if h.config.Downer != "" {
 		if err := h.Sub().On(h.config.Downer, false); err != nil {
 			result = BasicErrJoin(result, err)
 		}
 	}
+
 	if h.config.Upper != "" {
 		if err := h.Sub().On(h.config.Upper, true); err != nil {
 			result = BasicErrJoin(result, err)
 		}
 	}
+
 	return result
 }
+
 
 func (h *Homeostasis) down() error {
 	var result error
 
-	// When executing "down", we turn OFF the upper and turn ON the downer.
+	// Check first: can we enable the downer target?
+	if h.config.Downer != "" {
+		ok, reason := h.canEnable(h.config.Downer)
+		if !ok {
+			if reason == "" {
+				reason = "ATO limit reached"
+			}
+			log.Printf("Homeostasis: blocked enabling down target '%s' for '%s': %s\n",
+				h.config.Downer, h.config.Name, reason)
+			return result
+		}
+	}
+
+	// Now perform switching
 	if h.config.Upper != "" {
 		if err := h.Sub().On(h.config.Upper, false); err != nil {
 			result = BasicErrJoin(result, err)
 		}
 	}
+
 	if h.config.Downer != "" {
 		if err := h.Sub().On(h.config.Downer, true); err != nil {
 			result = BasicErrJoin(result, err)
 		}
 	}
+
 	return result
 }
 
