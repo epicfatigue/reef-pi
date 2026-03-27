@@ -68,13 +68,6 @@ On a fresh Raspberry Pi OS system, run:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/epicfatigue/reef-pi/main/install.sh | sudo bash
 ```
-
-If you would like to compile from source to make your own changes, run:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/epicfatigue/reef-pi/main/Compile_and_install.sh | sudo bash
-```
-
 ---
 
 ### What the Installer Does
