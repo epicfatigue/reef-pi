@@ -47,6 +47,38 @@ if command -v apt-get >/dev/null 2>&1; then
   apt-get -f install -y
 fi
 
+POLKIT_RULE="/etc/polkit-1/rules.d/49-reefpi.rules"
+
+log "Installing polkit rule for reef-pi service control"
+
+mkdir -p /etc/polkit-1/rules.d
+
+cat > "${POLKIT_RULE}" <<'EOF'
+polkit.addRule(function(action, subject) {
+    if (subject.user == "reefpi") {
+        if (action.id == "org.freedesktop.systemd1.manage-units") {
+            var unit = action.lookup("unit");
+            var verb = action.lookup("verb");
+            if (unit == "reef-pi.service" && verb == "restart") {
+                return polkit.Result.YES;
+            }
+        }
+
+        if (action.id == "org.freedesktop.login1.reboot" ||
+            action.id == "org.freedesktop.login1.reboot-multiple-sessions" ||
+            action.id == "org.freedesktop.login1.power-off" ||
+            action.id == "org.freedesktop.login1.power-off-multiple-sessions") {
+            return polkit.Result.YES;
+        }
+    }
+});
+EOF
+
+chmod 0644 "${POLKIT_RULE}"
+
+log "Reloading polkit"
+systemctl restart polkit >/dev/null 2>&1 || true
+
 log "Restarting service: ${SERVICE}"
 systemctl daemon-reload || true
 systemctl enable "${SERVICE}.service" >/dev/null 2>&1 || true
